@@ -8,9 +8,11 @@ The ai_ping can run as either of those options:
 
 The ai _ping does not make use of GPU to run, but can request a test on GPU by calling the route /gpu (which will break if no GPU on the hardware running it)
 
-## Python libs requirement
+## Requirements
 
-See All requirements in the Dockerfile ; the requirements.txt is a minimal requirement on top of another setup prepared for AI (including tensorflow etc...)
+ 1/ Python libs requirement: See All requirements in the Dockerfile ; the requirements.txt is a minimal requirement on top of another setup prepared for AI (including tensorflow etc...)
+
+ 2/ it is assumed that two directories /_input  and  /_output  exist and are accessible by the AI. /_input receives the files to process by the AAI before it starts, whereas /_output  receives any file output from the AI.
 
 ## BATCH MODE RUN
 // to test PING in BATCH mode (not a server), use: runlocal.bat  (it has its entry point with runlocal.py, then making use of _ping.py)
