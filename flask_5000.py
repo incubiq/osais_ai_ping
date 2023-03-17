@@ -47,7 +47,7 @@ osais_initializeAI({
     "port_gateway": gPortGateway, 
     "port_localOSAIS": gPortLocalOSAIS, 
     "ip_local": gIPLocalOSAIS,
-    "isLocal": True,            ## change this to run from external IP
+    "isLocal": False,           ## change this to run from external IP
     "isVirtualAI": True         ## change this to run alongside AI Gateway
 })
 

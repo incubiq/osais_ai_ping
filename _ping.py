@@ -17,8 +17,8 @@ root=os.path.join(fileDir, '..')
 sys.path.append(root) 
 
 # need to include OSAIS python lib
-from libOSAISVirtualAI import osais_notify, osais_getInfo
-from libOSAISVirtualAI import AI_PROGRESS_AI_STARTED, AI_PROGRESS_INIT_IMAGE, AI_PROGRESS_DONE_IMAGE, AI_PROGRESS_AI_STOPPED
+from libOSAISVirtualAI import osais_notify, osais_getInfo, getCredsParams, getMorphingParams, getStageParams
+from libOSAISVirtualAI import AI_PROGRESS_ERROR, AI_PROGRESS_AI_STARTED, AI_PROGRESS_INIT_IMAGE, AI_PROGRESS_DONE_IMAGE, AI_PROGRESS_AI_STOPPED
 
 ## init notify params
 AI_ENGINE=osais_getInfo()["name"]
@@ -56,6 +56,7 @@ def fn_run(_args):
     vq_parser.add_argument("-uid",  "--unique_id", type=int, help="Unique ID of this AI session", default=0, dest='uid')    ##  this is for comms with OpenSourceAIs
     vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
     vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
+    vq_parser.add_argument("-local", "--islocal", type=bool, help="is local or prod?", default=False, dest='isLocal')
 
     # Add the PING arguments
     vq_parser.add_argument("-p",    "--prompts", type=str, help="Text prompts", default=None, dest='prompts')
@@ -70,31 +71,25 @@ def fn_run(_args):
 
     try:
         args = vq_parser.parse_args(_args)
-        CredsParam={"engine": AI_ENGINE, "tokenAI": args.tokenAI, "username": args.username} 
-        MorphingParam={"uid": args.uid, "cycle": 0, "filename":args.init_image}
-        StageParam={"stage": AI_PROGRESS_AI_STARTED, "descr":"Just parsed AI params"}
+        CredsParam=getCredsParams(args)
+        MorphingParam=getMorphingParams(args)
+        StageParam=getStageParams(args, AI_PROGRESS_AI_STARTED)
         osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification
         print(args)
     except:
         print("\r\nCRITICAL ERROR!!!")
-        _token=""
-        if args.tokenAI:
-            _token=args.tokenAI
-        _uid=""
-        if args.uid:
-            _uid=args.uid
-        CredsParam={"engine": AI_ENGINE, "tokenAI": _token, "username": ""} 
-        MorphingParam={"uid": _uid, "cycle": 0, "filename":""}
-        StageParam={"stage": AI_PROGRESS_AI_STOPPED, "descr":"parser Error"}
+        CredsParam=getCredsParams(args)
+        MorphingParam=getMorphingParams(args)
+        StageParam=getStageParams(args, AI_PROGRESS_ERROR)
         osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification
         return False
 
-    StageParam={"stage": AI_PROGRESS_INIT_IMAGE, "descr": "destination image = "+args.output}
+    StageParam=getStageParams(args, AI_PROGRESS_INIT_IMAGE)
     osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification
 
     shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, args.output))
 
-    StageParam={"stage": AI_PROGRESS_DONE_IMAGE, "descr": "copied input image to destination image"}
+    StageParam=getStageParams(args, AI_PROGRESS_DONE_IMAGE)
     osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification
 
     lst=[]

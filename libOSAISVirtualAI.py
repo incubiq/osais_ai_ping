@@ -7,7 +7,6 @@ import requests
 import schedule
 import json
 import sys
-import os
 import base64
 from datetime import datetime
 
@@ -19,23 +18,40 @@ from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get
 
 gName=None                      ## name of this AI (name of engine)
 gMachineName=get_machine_name() ## the name of the machine (will change all the time if inside docker, ot keep same if running on local server)
+gLastchecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
+
+## authenticate into OSAIS
 gAuthToken=None                 ## auth token into OSAIS for when working as virtual Ai
 gToken=None                     ## token used for authentication into OSAIS
 gSecret=None                    ## secret used for authentication into OSAIS
 gOriginOSAIS=None               ## location of OSAIS
-gLastchecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
+
+## authenticate into a local OSAIS (debug)
+gAuthTokenLocal=None            ## auth token into a local OSAIS (debug) for when working as virtual Ai
+gTokenLocal=None                ## token used for authentication into a local OSAIS (debug)
+gSecretLocal=None               ## secret used for authentication into a local OSAIS (debug)
+gOriginLocalOSAIS=None          ## location of a local OSAIS (debug)
+
+gOriginGateway=None             ## location of the local gateway for this (local) AI
+
+## IP and Ports
 gExtIP=get_external_ip()        ## where this AI can be accessed from outside (IP)
 gIPLocal=None                   ## where this AI can be accessed locally (localhost)
 gPortAI=None                    ## port where this AI is accessed 
 gPortGateway=None               ## port where the gateway can be accessed
 gPortLocalOSAIS=None            ## port where a local OSAIS can be accessed
+
+## virtual AI / local /docker ?
 gIsDocker=is_running_in_docker()   ## are we running in a Docker?
 gIsVirtualAI=False              ## are we working as a Virtual AI config?
 gIsLocal=False                  ## are we working locally (localhost server)?
+
+## temp cache
 gAProcessed=[]                  ## all token being sent to processing (never call twice for same)
 
 AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
+AI_PROGRESS_ARGS=1
 AI_PROGRESS_AI_STARTED=2
 AI_PROGRESS_INIT_IMAGE=3
 AI_PROGRESS_DONE_IMAGE=4
@@ -44,13 +60,6 @@ AI_PROGRESS_AI_STOPPED=5
 ## ------------------------------------------------------------------------
 #       private fcts
 ## ------------------------------------------------------------------------
-
-def _updateOriginOSAIS(ip):
-    global gOriginOSAIS
-    if ip=="13.40.45.141":
-        gOriginOSAIS="https://opensourceais.com/"
-    else:
-        gOriginOSAIS="https://opensourceais.com/"
 
 # Register our VAI into OSAIS
 def _registerVAI():
@@ -62,6 +71,9 @@ def _registerVAI():
     global gToken
     global gSecret
     global gOriginOSAIS
+    global gTokenLocal
+    global gSecretLocal
+    global gOriginLocalOSAIS
     global gIsVirtualAI
 
     _ip=gExtIP
@@ -85,40 +97,84 @@ def _registerVAI():
         "engine": gName
     }
 
-    response = requests.post(gOriginOSAIS+"api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
+    ## reg with Prod
+    try:
+        response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
+        objRes=response.json()["data"]
+        if objRes is None:
+            print("COULD NOT REGISTER, stopping it here")
+            sys.exit()
 
-    objRes=response.json()["data"]
-    if objRes is None:
-        print("COULD NOT REGISTER, stopping it here")
-        sys.exit()
+        gToken=objRes["token"]
+        gSecret=objRes["secret"]
+        print("We are REGISTERED with OSAIS Prod")
 
-    gToken=objRes["token"]
-    gSecret=objRes["secret"]
-    print("We are REGISTERED")
-    return objRes
+    except Exception as err:
+        raise err
+
+    ## reg with Local OSAIS (debug)
+    try:
+        response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
+        objRes=response.json()["data"]
+        if objRes is None:
+            print("COULD NOT REGISTER with debug")
+
+        gTokenLocal=objRes["token"]
+        gSecretLocal=objRes["secret"]
+        print("We are REGISTERED with OSAIS Local (debug)")
+    except Exception as err:
+        ## nothing 
+        return True
+
+    return True
 
 # Authenticate into OSAIS
 def _loginVAI():
     global gToken
     global gSecret
     global gAuthToken
+    global gTokenLocal
+    global gSecretLocal
+    global gAuthTokenLocal
 
     headers = {
         "Content-Type": "application/json"
     }
-    response = requests.post(gOriginOSAIS+"api/v1/public/virtualai/login", headers=headers, data=json.dumps({
-        "token": gToken,
-        "secret": gSecret
-    }))
 
-    objRes=response.json()["data"]
-    if objRes is None:
-        print("COULD NOT LOGIN, stopping it here")
-        sys.exit()
+    try:
+        response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
+            "token": gToken,
+            "secret": gSecret
+        }))
 
-    print("We got an authentication token into OSAIS")
-    gAuthToken=objRes["authToken"]    
-    return objRes
+        objRes=response.json()["data"]
+        if objRes is None:
+            print("COULD NOT LOGIN, stopping it here")
+            sys.exit()
+
+        print("We got an authentication token into OSAIS")
+        gAuthToken=objRes["authToken"]    
+
+    except Exception as err:
+        raise err
+
+    try:
+        response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
+            "token": gTokenLocal,
+            "secret": gSecretLocal
+        }))
+
+        objRes=response.json()["data"]
+        if objRes is None:
+            print("COULD NOT LOGIN into OSAIS Local")
+
+        print("We got an authentication token into OSAIS Local (debug)")
+        gAuthTokenLocal=objRes["authToken"]    
+
+    except Exception as err:
+        return True
+
+    return True
 
 def _getArgs(_args):
     result = []
@@ -129,34 +185,47 @@ def _getArgs(_args):
     return result
 
 # Upload image to OSAIS 
-def _uploadImageToOSAIS(objParam):
+def _uploadImageToOSAIS(objParam, isLocal):
+    if gIsVirtualAI==False:
+        return None
+    
     global gAuthToken
     global gOriginOSAIS
+    global gAuthTokenLocal
+    global gOriginLocalOSAIS
+
+    _auth=gAuthToken
+    if isLocal:
+        _auth=gAuthTokenLocal
+    _osais=gOriginOSAIS
+    if isLocal:
+        _osais=gOriginLocalOSAIS
 
     # lets go call OSAIS AI Gateway / or OSAIS itself
     headers = {
         "Content-Type": 'application/json', 
         'Accept': 'text/plain',
-        "Authorization": f"Bearer {gAuthToken}"
+        "Authorization": f"Bearer {_auth}"
     }
 
-    if gIsVirtualAI==True:
-        api_url=gOriginOSAIS+"api/v1/private/upload"        
-        payload = json.dumps(objParam)
-        response = requests.post(api_url, headers=headers, data=payload )
-        objRes=response.json()
-        return objRes    
-    return None
+    api_url=f"{_osais}api/v1/private/upload"        
+    payload = json.dumps(objParam)
+    response = requests.post(api_url, headers=headers, data=payload )
+    objRes=response.json()
+    return objRes    
 
 ## ------------------------------------------------------------------------
 #       public fcts
 ## ------------------------------------------------------------------------
 
 ## resetting who this AI is talking to (OSAIS or gateway)
-def osais_resetOSAIS(_location):
+def osais_resetOSAIS(_locationProd, _localtionDebug):
     global gOriginOSAIS
-    gOriginOSAIS=_location
-    print("=> This AI is reset to talk to "+gOriginOSAIS+"\r\n")
+    global gOriginLocalOSAIS
+    gOriginOSAIS=_locationProd
+    gOriginLocalOSAIS=_localtionDebug
+    print("=> This AI is reset to talk to PROD "+gOriginOSAIS)
+    print("=> This AI is reset to talk to DEBUG "+gOriginLocalOSAIS+"\r\n")
     return True
 
 # Init the Virtual AI
@@ -179,13 +248,10 @@ def osais_initializeAI(params):
     ## where is OSAIS for us then?
     global gExtIP
     global gIsDocker
-    _osais=f"http://{gIPLocal}:{gPortGateway}/"         ## config for local gateway (local and not virtual)
-    if gIsVirtualAI:
-        _osais=f"http://{gIPLocal}:{gPortLocalOSAIS}/"  ## config for local OSAIS (local and virtual)
-    if gIsDocker:
-        _osais=f"https://opensourceais.com/"            ## config for prod OSAIS (remote and virtual)
+    global gOriginGateway
+    gOriginGateway=f"http://{gIPLocal}:{gPortGateway}/"         ## config for local gateway (local and not virtual)
 
-    osais_resetOSAIS(_osais)
+    osais_resetOSAIS("https://opensourceais.com/", f"http://{gIPLocal}:{gPortLocalOSAIS}/")
 
     if gIsVirtualAI:
         osais_authenticateAI()
@@ -266,8 +332,10 @@ def osais_runAI(fn_run, _args):
     gAProcessed.append(_uid)
     _token=_args.get('-t')
 
+    isLocal=(_args.get('-local')=="True")
+
     ## notify start
-    CredsParam={"engine": gName, "tokenAI": _token, "username": _args.get('-u')}
+    CredsParam={"engine": gName, "tokenAI": _token, "username": _args.get('-u'), "isLocal": isLocal}
     MorphingParam={"uid": _uid, "cycle": 0, "filename": _input}
     StageParam={"stage": AI_PROGRESS_AI_STARTED, "descr": "AI is ready to start"}
     osais_notify(CredsParam, MorphingParam , StageParam)
@@ -283,9 +351,13 @@ def osais_runAI(fn_run, _args):
 
 # Direct Notify OSAIS 
 def osais_notify(CredParam, MorphingParam, StageParam):
+    global gIPLocal
+    global gPortGateway
     global gOriginOSAIS
+    global gOriginLocalOSAIS
     global gIsVirtualAI
     global gAuthToken
+    global gAuthTokenLocal
     global gLastchecked_at
     gLastchecked_at = datetime.utcnow()
 
@@ -305,10 +377,21 @@ def osais_notify(CredParam, MorphingParam, StageParam):
         "Content-Type": "application/json"
     }
 
-    api_url = gOriginOSAIS+"api/v1/public/notify"
-    if gIsVirtualAI==True:
-        headers["Authorization"]= f"Bearer {gAuthToken}"
-        api_url=gOriginOSAIS+"api/v1/private/notify"
+    ## config for calling gateway
+    api_url = f"{gOriginGateway}api/v1/public/notify"
+
+    ## config for calling OSAIS (no gateway)
+    if gIsVirtualAI:
+        _osais=gOriginOSAIS
+        _auth=gAuthToken
+
+        if CredParam["isLocal"]:
+            _osais=gOriginLocalOSAIS
+            _auth=gAuthTokenLocal
+
+        if gIsVirtualAI==True:
+            headers["Authorization"]= f"Bearer {_auth}"
+            api_url=f"{_osais}api/v1/private/notify"
 
     objParam={
         "response": {
@@ -339,8 +422,30 @@ def osais_notify(CredParam, MorphingParam, StageParam):
                 "cycle": str(MorphingParam["cycle"]),
                 "engine": CredParam["engine"],
             }            
-            _uploadImageToOSAIS(param)
+            _uploadImageToOSAIS(param, CredParam["isLocal"])
     return objRes
+
+def getCredsParams(_args) :
+    global gName
+    return {"engine": gName, "tokenAI": _args.tokenAI, "username": _args.username, "isLocal": _args.isLocal} 
+
+def getMorphingParams(_args) :
+    return {"uid": _args.uid, "cycle": 0, "filename":_args.init_image}
+
+def getStageParams(_args, _stage) :
+    if _stage==AI_PROGRESS_ARGS:
+        return {"stage": AI_PROGRESS_AI_STARTED, "descr":"Just parsed AI params"}
+    if _stage==AI_PROGRESS_ERROR:
+        return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped with error"}
+    if _stage==AI_PROGRESS_AI_STARTED:
+        return {"stage": AI_PROGRESS_AI_STARTED, "descr":"AI started"}
+    if _stage==AI_PROGRESS_AI_STOPPED:
+        return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped"}
+    if _stage==AI_PROGRESS_INIT_IMAGE:
+        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.output}
+    if _stage==AI_PROGRESS_DONE_IMAGE:
+        return {"stage": AI_PROGRESS_DONE_IMAGE, "descr":"copied input image to destination image"}
+    return {"stage": AI_PROGRESS_ERROR, "descr":"error"}
 
 
 ## ------------------------------------------------------------------------

@@ -34,6 +34,6 @@ docker build -t <your_repo>:ai_ping .
 docker push <your_repo>:ai_ping
 
 // on windows
-docker run -it -v "$(pwd)/_input:/src/app/_input" -v "$(pwd)/_output:/src/app/_output" --name ai_ping --rm --publish 5001:5000 yeepeekoo/my_images:ai_ping
+docker run -d --name ai_ping  --publish 5001:5000 yeepeekoo/my_images:ai_ping
 
 // on WLS => same (but GPU should work! => add param: --gpus all)
