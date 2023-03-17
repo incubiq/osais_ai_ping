@@ -30,8 +30,10 @@ app = Flask(APP_ENGINE)
 #       all global vars
 ## ------------------------------------------------------------------------
 
-gPort = 5001
-gGateway="http://192.168.1.83:3023/"
+gPortAI = 5001
+gPortGateway = 3023
+gPortLocalOSAIS = 3022
+gIPLocalOSAIS="192.168.1.83"
 
 ## ------------------------------------------------------------------------
 #       connect the AI with OSAIS
@@ -41,8 +43,12 @@ gGateway="http://192.168.1.83:3023/"
 from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI
 osais_initializeAI({
     "engine": APP_ENGINE, 
-    "port": gPort, 
-    "osais": gGateway,
+    "port_ai": gPortAI, 
+    "port_gateway": gPortGateway, 
+    "port_localOSAIS": gPortLocalOSAIS, 
+    "ip_local": gIPLocalOSAIS,
+    "isLocal": True,            ## change this to run from external IP
+    "isVirtualAI": True         ## change this to run alongside AI Gateway
 })
 
 ## ------------------------------------------------------------------------

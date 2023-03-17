@@ -17,7 +17,7 @@ root=os.path.join(fileDir, '..')
 sys.path.append(root) 
 
 # need to include OSAIS python lib
-from libOSAISVirtualAI import osais_notify, osais_resetOSAIS, osais_getInfo
+from libOSAISVirtualAI import osais_notify, osais_getInfo
 from libOSAISVirtualAI import AI_PROGRESS_AI_STARTED, AI_PROGRESS_INIT_IMAGE, AI_PROGRESS_DONE_IMAGE, AI_PROGRESS_AI_STOPPED
 
 ## init notify params
@@ -88,11 +88,6 @@ def fn_run(_args):
         StageParam={"stage": AI_PROGRESS_AI_STOPPED, "descr":"parser Error"}
         osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification
         return False
-
-    # ensure trailing /
-    if(args.OSAIS_origin[-1] != '/'):
-        args.OSAIS_origin=args.OSAIS_origin+"/"
-    osais_resetOSAIS(args.OSAIS_origin)
 
     StageParam={"stage": AI_PROGRESS_INIT_IMAGE, "descr": "destination image = "+args.output}
     osais_notify(CredsParam, MorphingParam , StageParam)            # OSAIS Notification

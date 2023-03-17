@@ -25,29 +25,48 @@ gSecret=None                    ## secret used for authentication into OSAIS
 gOriginOSAIS=None               ## location of OSAIS
 gLastchecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
 gExtIP=get_external_ip()        ## where this AI can be accessed from outside (IP)
-gPort=None                      ## where this AI can be accessed from outside (port)
+gIPLocal=None                   ## where this AI can be accessed locally (localhost)
+gPortAI=None                    ## port where this AI is accessed 
+gPortGateway=None               ## port where the gateway can be accessed
+gPortLocalOSAIS=None            ## port where a local OSAIS can be accessed
 gIsDocker=is_running_in_docker()   ## are we running in a Docker?
-gIsVirtualAI=gIsDocker          ## are we working as a Virtual AI config?
+gIsVirtualAI=False              ## are we working as a Virtual AI config?
+gIsLocal=False                  ## are we working locally (localhost server)?
 gAProcessed=[]                  ## all token being sent to processing (never call twice for same)
 
+AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
-AI_PROGRESS_AI_STARTED=1
-AI_PROGRESS_INIT_IMAGE=2
-AI_PROGRESS_DONE_IMAGE=3
-AI_PROGRESS_AI_STOPPED=4
-AI_PROGRESS_WARNING=10
+AI_PROGRESS_AI_STARTED=2
+AI_PROGRESS_INIT_IMAGE=3
+AI_PROGRESS_DONE_IMAGE=4
+AI_PROGRESS_AI_STOPPED=5
 
 ## ------------------------------------------------------------------------
 #       private fcts
 ## ------------------------------------------------------------------------
 
+def _updateOriginOSAIS(ip):
+    global gOriginOSAIS
+    if ip=="13.40.45.141":
+        gOriginOSAIS="https://opensourceais.com/"
+    else:
+        gOriginOSAIS="https://opensourceais.com/"
+
 # Register our VAI into OSAIS
 def _registerVAI():
     global gExtIP
-    global gPort
+    global gIPLocal
+    global gPortLocalOSAIS
+    global gPortAI
     global gName
     global gToken
     global gSecret
+    global gOriginOSAIS
+    global gIsVirtualAI
+
+    _ip=gExtIP
+    if gIsVirtualAI:
+        _ip=gIPLocal
 
     objCudaInfo=getCudaInfo()
     gpuName="no GPU"
@@ -61,10 +80,11 @@ def _registerVAI():
         "os": get_os_name(),
         "gpu": gpuName,
         "machine": get_machine_name(),
-        "ip": gExtIP,
-        "port": gPort,
+        "ip": _ip,
+        "port": gPortAI,
         "engine": gName
     }
+
     response = requests.post(gOriginOSAIS+"api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
 
     objRes=response.json()["data"]
@@ -141,13 +161,33 @@ def osais_resetOSAIS(_location):
 
 # Init the Virtual AI
 def osais_initializeAI(params):
-    global gPort
-    gPort=params["port"]
+    global gPortAI
+    gPortAI=params["port_ai"]
+    global gPortGateway
+    gPortGateway=params["port_gateway"]
+    global gPortLocalOSAIS
+    gPortLocalOSAIS=params["port_localOSAIS"]
+    global gIPLocal
+    gIPLocal=params["ip_local"]
     global gName
     gName=params["engine"]
-    osais_resetOSAIS(params["osais"])
+    global gIsLocal
+    gIsLocal=params["isLocal"]
+    global gIsVirtualAI
+    gIsVirtualAI=params["isVirtualAI"]
 
+    ## where is OSAIS for us then?
+    global gExtIP
+    global gIsDocker
+    _osais=f"http://{gIPLocal}:{gPortGateway}/"         ## config for local gateway (local and not virtual)
+    if gIsVirtualAI:
+        _osais=f"http://{gIPLocal}:{gPortLocalOSAIS}/"  ## config for local OSAIS (local and virtual)
     if gIsDocker:
+        _osais=f"https://opensourceais.com/"            ## config for prod OSAIS (remote and virtual)
+
+    osais_resetOSAIS(_osais)
+
+    if gIsVirtualAI:
         osais_authenticateAI()
 
     if gIsVirtualAI==False: 
@@ -159,13 +199,13 @@ def osais_initializeAI(params):
 ## info about this AI
 def osais_getInfo() :
     global gExtIP
-    global gPort
+    global gPortAI
     global gName
     global gIsDocker
     global gMachineName
     return {
         "name": gName,
-        "location": f"{gExtIP}:{gPort}/",
+        "location": f"{gExtIP}:{gPortAI}/",
         "isRunning": True,    
         "isDocker": gIsDocker,    
         "lastActive_at": gLastchecked_at,
