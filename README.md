@@ -1,4 +1,4 @@
-# osais_ai_ping
+# OSAIS: AI_PING
 A basic python prog that connects AI to OSAIS or OSAIS Gateway. It demonstrates how to integrate any AI into OSAIS for compatibility.
 
 The ai_ping can run as either of those options:
