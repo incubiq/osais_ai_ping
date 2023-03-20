@@ -27,20 +27,19 @@ from flask import Flask, request, jsonify
 app = Flask(APP_ENGINE)
 
 ## ------------------------------------------------------------------------
-#       all global vars
-## ------------------------------------------------------------------------
-
-gPortAI = 5001
-gPortGateway = 3023
-gPortLocalOSAIS = 3022
-gIPLocalOSAIS="192.168.1.83"
-
-## ------------------------------------------------------------------------
 #       connect the AI with OSAIS
 ## ------------------------------------------------------------------------
 
+from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_loadConfig
+
+gConfig=osais_loadConfig(APP_ENGINE)
+gPortAI = gConfig["port"]
+gVersion = gConfig["version"]
+gPortGateway = 3023                         ## port of the local gateway (if configured to run alongside it)?
+gPortLocalOSAIS = 3022                      ## port of the local OSAIS (if running on debug)?
+gIPLocalOSAIS="192.168.1.83"                ## IP of the local OSAIS
+
 ## register and login this virtual AI
-from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI
 osais_initializeAI({
     "engine": APP_ENGINE, 
     "port_ai": gPortAI, 
@@ -48,7 +47,7 @@ osais_initializeAI({
     "port_localOSAIS": gPortLocalOSAIS, 
     "ip_local": gIPLocalOSAIS,
     "isLocal": False,           ## change this to run from external IP
-    "isVirtualAI": True         ## change this to run alongside AI Gateway
+    "isVirtualAI": False         ## change this to run alongside AI Gateway
 })
 
 ## ------------------------------------------------------------------------

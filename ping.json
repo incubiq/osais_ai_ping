@@ -1,0 +1,56 @@
+{
+    "name": "ping",
+    "location": "http://0.0.0.0",
+    "port": 5001,
+    "version": "1.0.1",
+    "description": "Ping AI for test purposes only",
+    "params": [{
+        "in": "engine",
+        "out": null,
+        "isMandatory": false,
+        "type": "string",
+        "default": "ping"
+    }, {
+        "in": "username",
+        "out": "-u",
+        "isMandatory": true,
+        "type": "string",
+        "default": "anon"
+    }, {
+        "in": "uid",
+        "out": "-uid",
+        "isMandatory": true,
+        "type": "int",
+        "default": null
+    }, {
+        "in": "token",
+        "out": "-t",
+        "isMandatory": true,
+        "type": "string",
+        "default": null
+    }, {
+        "in": "width",
+        "out": "-width",
+        "isMandatory": true,
+        "type": "int",
+        "default": 512
+    }, {
+        "in": "height",
+        "out": "-height",
+        "isMandatory": true,
+        "type": "int",
+        "default": 512
+    }, {
+        "in": "url_upload",
+        "out": "url_upload",
+        "isMandatory": true,
+        "type": "string",
+        "default": null
+    }, {
+        "in": "output",
+        "out": "-o",
+        "isMandatory": true,
+        "type": "function",
+        "default": "$output_uid.ext"
+    }]
+}

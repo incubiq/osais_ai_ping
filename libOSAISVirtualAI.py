@@ -61,12 +61,64 @@ AI_PROGRESS_AI_STOPPED=5
 #       private fcts
 ## ------------------------------------------------------------------------
 
+# load the config file into a JSON
+def _loadConfig(_name): 
+    fJSON = open(f'{_name}.json')
+    _json = json.load(fJSON)
+    return _json
+
+## get the full AI config, including JSON params and hardware info
+def _getFullConfig(_name) :
+    global gPortAI
+    global gIsVirtualAI
+    global gIPLocal
+    global gExtIP
+
+    _ip=gExtIP
+    if gIsVirtualAI:
+        _ip=gIPLocal
+
+    _json=_loadConfig(_name)
+
+    objCudaInfo=getCudaInfo()
+    gpuName="no GPU"
+    if objCudaInfo != 0 and "name" in objCudaInfo and objCudaInfo["name"]:
+        gpuName=objCudaInfo["name"]
+
+    return {
+        "os": get_os_name(),
+        "gpu": gpuName,
+        "machine": get_machine_name(),
+        "ip": _ip,
+        "port": gPortAI,
+        "engine": _json
+    }
+
+## notify the gateway of our AI config file
+def _notifyGateway() : 
+    global gName
+    global gOriginGateway
+
+    headers = {
+        "Content-Type": 'application/json', 
+        'Accept': 'text/plain',
+    }
+    objParam=_getFullConfig(gName)
+
+    ## notify gateway
+    try:
+        response = requests.post(f"{gOriginGateway}api/v1/public/ai/config", headers=headers, data=json.dumps(objParam))
+        objRes=response.json()["data"]
+        if objRes is None:
+            print("Warning: could not notify Gateway")
+
+        print("gateway is notified of AI settings")
+    except Exception as err:
+        raise err
+    return True
+
 # Register our VAI into OSAIS
 def _registerVAI():
-    global gExtIP
-    global gIPLocal
-    global gPortLocalOSAIS
-    global gPortAI
     global gName
     global gToken
     global gSecret
@@ -74,28 +126,12 @@ def _registerVAI():
     global gTokenLocal
     global gSecretLocal
     global gOriginLocalOSAIS
-    global gIsVirtualAI
-
-    _ip=gExtIP
-    if gIsVirtualAI:
-        _ip=gIPLocal
-
-    objCudaInfo=getCudaInfo()
-    gpuName="no GPU"
-    if objCudaInfo != 0 and "name" in objCudaInfo and objCudaInfo["name"]:
-        gpuName=objCudaInfo["name"]
 
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": 'application/json', 
+        'Accept': 'text/plain',
     }
-    objParam={
-        "os": get_os_name(),
-        "gpu": gpuName,
-        "machine": get_machine_name(),
-        "ip": _ip,
-        "port": gPortAI,
-        "engine": gName
-    }
+    objParam=_getFullConfig(gName)
 
     ## reg with Prod
     try:
@@ -218,7 +254,11 @@ def _uploadImageToOSAIS(objParam, isLocal):
 #       public fcts
 ## ------------------------------------------------------------------------
 
-## resetting who this AI is talking to (OSAIS or gateway)
+## load the config of this AI
+def osais_loadConfig(_name): 
+    return _loadConfig(_name)
+
+## resetting who this AI is talking to (OSAIS prod and dbg)
 def osais_resetOSAIS(_locationProd, _localtionDebug):
     global gOriginOSAIS
     global gOriginLocalOSAIS
@@ -226,6 +266,13 @@ def osais_resetOSAIS(_locationProd, _localtionDebug):
     gOriginLocalOSAIS=_localtionDebug
     print("=> This AI is reset to talk to PROD "+gOriginOSAIS)
     print("=> This AI is reset to talk to DEBUG "+gOriginLocalOSAIS+"\r\n")
+    return True
+
+def osais_resetGateway(_localGateway):
+    global gOriginGateway
+    gOriginGateway=_localGateway
+    _notifyGateway()
+    print("=> This AI is reset to talk to Gateway "+_localGateway)
     return True
 
 # Init the Virtual AI
@@ -249,17 +296,23 @@ def osais_initializeAI(params):
     global gExtIP
     global gIsDocker
     global gOriginGateway
+    global gAuthToken
+    global gAuthTokenLocal
+    global gOriginOSAIS
+    global gOriginLocalOSAIS
     gOriginGateway=f"http://{gIPLocal}:{gPortGateway}/"         ## config for local gateway (local and not virtual)
 
-    osais_resetOSAIS("https://opensourceais.com/", f"http://{gIPLocal}:{gPortLocalOSAIS}/")
-
     if gIsVirtualAI:
+        osais_resetOSAIS("https://opensourceais.com/", f"http://{gIPLocal}:{gPortLocalOSAIS}/")
         osais_authenticateAI()
-
-    if gIsVirtualAI==False: 
-        print("=> Running "+gName+" AI as a server connected to local Gateway "+gOriginOSAIS+"\r\n")
+        if gAuthToken!=None:
+            print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginOSAIS)
+        if gAuthTokenLocal!=None:
+            print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginLocalOSAIS)
     else:
-        print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginOSAIS+"\r\n")
+        osais_resetGateway(gOriginGateway)
+        if gOriginGateway!=None:
+            print("=> Running "+gName+" AI as a server connected to local Gateway "+gOriginGateway)
     return True
 
 ## info about this AI
@@ -292,11 +345,8 @@ def osais_authenticateAI():
     global gOriginOSAIS
     if gIsVirtualAI:
 
-        resp= _registerVAI()
-        print(json.dumps(resp, indent=4))
-
-        resp=_loginVAI()
-        print(json.dumps(resp, indent=4))
+        _registerVAI()
+        _loginVAI()
 
         # Run the scheduler
         schedule.every().day.at("10:30").do(_loginVAI)
