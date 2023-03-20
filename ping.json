@@ -4,6 +4,7 @@
     "port": 5001,
     "version": "1.0.1",
     "description": "Ping AI for test purposes only",
+    "origin": "https://github.com/incubiq/osais_ai_ping",
     "params": [{
         "in": "engine",
         "out": null,

@@ -57,6 +57,7 @@ def fn_run(_args):
     vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
     vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
     vq_parser.add_argument("-local", "--islocal", type=bool, help="is local or prod?", default=False, dest='isLocal')
+    vq_parser.add_argument("-cycle", "--cycle", type=int, help="cycle", default=0, dest='cycle')
 
     # Add the PING arguments
     vq_parser.add_argument("-p",    "--prompts", type=str, help="Text prompts", default=None, dest='prompts')

@@ -11,7 +11,8 @@ import os
 import platform
 import ctypes
 
-cuda=0    #from cuda import cuda, nvrtc
+cuda=0                          ## from cuda import cuda, nvrtc
+gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
 
 ## ------------------------------------------------------------------------
 #       public fcts

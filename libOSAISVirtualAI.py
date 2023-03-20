@@ -16,7 +16,12 @@ from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get
 #       all global vars
 ## ------------------------------------------------------------------------
 
+gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
+
 gName=None                      ## name of this AI (name of engine)
+gVersion="0.0.0"                ## name of this AI's version (version of engine)
+gDescription=None               ## AI's quick description
+gOrigin=None                    ## where this AI came from (on internet)
 gMachineName=get_machine_name() ## the name of the machine (will change all the time if inside docker, ot keep same if running on local server)
 gLastchecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
 
@@ -63,8 +68,15 @@ AI_PROGRESS_AI_STOPPED=5
 
 # load the config file into a JSON
 def _loadConfig(_name): 
+    global gVersion
+    global gDescription
+    global gOrigin
+
     fJSON = open(f'{_name}.json')
     _json = json.load(fJSON)
+    gVersion=_json["version"]
+    gDescription=_json["description"]
+    gOrigin=_json["origin"]
     return _json
 
 ## get the full AI config, including JSON params and hardware info
@@ -480,7 +492,7 @@ def getCredsParams(_args) :
     return {"engine": gName, "tokenAI": _args.tokenAI, "username": _args.username, "isLocal": _args.isLocal} 
 
 def getMorphingParams(_args) :
-    return {"uid": _args.uid, "cycle": 0, "filename":_args.init_image}
+    return {"uid": _args.uid, "cycle": _args.cycle, "filename":_args.init_image}
 
 def getStageParams(_args, _stage) :
     if _stage==AI_PROGRESS_ARGS:
