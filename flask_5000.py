@@ -30,24 +30,36 @@ app = Flask(APP_ENGINE)
 #       connect the AI with OSAIS
 ## ------------------------------------------------------------------------
 
-from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_loadConfig
+import os
+from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_loadConfig, osais_authenticateAI
+
+gClientToken = os.environ.get('CLIENT_TOKEN')         ## getting the client_token from the docker config (this AI belongs to the client)
+gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
+gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
 
 gConfig=osais_loadConfig(APP_ENGINE)
 gPortAI = gConfig["port"]
 gVersion = gConfig["version"]
 gPortGateway = 3023                         ## port of the local gateway (if configured to run alongside it)?
 gPortLocalOSAIS = 3022                      ## port of the local OSAIS (if running on debug)?
-gIPLocalOSAIS="192.168.1.83"                ## IP of the local OSAIS
+gIPLocalOSAIS="0.0.0.0"                     ## IP of the local OSAIS
+
+print("===== Config =====")
+print("is Local: "+str(gIsLocal))
+print("is Virtual: "+str(gIsVirtualAI))
+print("owned by client: "+str(gClientToken))
+print("===== /Config =====")
 
 ## register and login this virtual AI
 osais_initializeAI({
+    "clientToken": gClientToken,
     "engine": APP_ENGINE, 
     "port_ai": gPortAI, 
     "port_gateway": gPortGateway, 
     "port_localOSAIS": gPortLocalOSAIS, 
     "ip_local": gIPLocalOSAIS,
-    "isLocal": False,           ## change this to run from external IP
-    "isVirtualAI": False         ## change this to run alongside AI Gateway
+    "isLocal": gIsLocal,   
+    "isVirtualAI": gIsVirtualAI
 })
 
 ## ------------------------------------------------------------------------
@@ -57,6 +69,10 @@ osais_initializeAI({
 @app.route('/')
 def home():
     return jsonify(osais_getInfo())
+
+@app.route('/auth')
+def auth():
+    return jsonify(osais_authenticateAI())
 
 @app.route('/status')
 def status():

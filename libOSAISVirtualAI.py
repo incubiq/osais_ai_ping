@@ -17,6 +17,7 @@ from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get
 ## ------------------------------------------------------------------------
 
 gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
+gClientToken=None               ## token of the client (necessary to claim VirtAI regs)
 
 gName=None                      ## name of this AI (name of engine)
 gVersion="0.0.0"                ## name of this AI's version (version of engine)
@@ -53,6 +54,7 @@ gIsLocal=False                  ## are we working locally (localhost server)?
 
 ## temp cache
 gAProcessed=[]                  ## all token being sent to processing (never call twice for same)
+gIsScheduled=False              ## do we have a scheduled event running?
 
 AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
@@ -81,7 +83,15 @@ def _loadConfig(_name):
 
 ## get the full AI config, including JSON params and hardware info
 def _getFullConfig(_name) :
+    global gClientToken
     global gPortAI
+    global gName
+    global gToken
+    global gSecret
+    global gOriginOSAIS
+    global gTokenLocal
+    global gSecretLocal
+    global gOriginLocalOSAIS
     global gIsVirtualAI
     global gIPLocal
     global gExtIP
@@ -98,6 +108,7 @@ def _getFullConfig(_name) :
         gpuName=objCudaInfo["name"]
 
     return {
+        "client_tocken": gClientToken,
         "os": get_os_name(),
         "gpu": gpuName,
         "machine": get_machine_name(),
@@ -138,6 +149,7 @@ def _registerVAI():
     global gTokenLocal
     global gSecretLocal
     global gOriginLocalOSAIS
+    global gIsLocal
 
     headers = {
         "Content-Type": 'application/json', 
@@ -146,19 +158,19 @@ def _registerVAI():
     objParam=_getFullConfig(gName)
 
     ## reg with Prod
-    try:
-        response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
-        objRes=response.json()["data"]
-        if objRes is None:
-            print("COULD NOT REGISTER, stopping it here")
-            sys.exit()
+    if gIsLocal==False:
+        try:
+            response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
+            objRes=response.json()["data"]
+            if objRes is None:
+                print("COULD NOT REGISTER, stopping it here")
+                sys.exit()
 
-        gToken=objRes["token"]
-        gSecret=objRes["secret"]
-        print("We are REGISTERED with OSAIS Prod")
-
-    except Exception as err:
-        raise err
+            gToken=objRes["token"]
+            gSecret=objRes["secret"]
+            print("We are REGISTERED with OSAIS Prod")
+        except Exception as err:
+            raise err
 
     ## reg with Local OSAIS (debug)
     try:
@@ -189,38 +201,36 @@ def _loginVAI():
         "Content-Type": "application/json"
     }
 
-    try:
-        response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
-            "token": gToken,
-            "secret": gSecret
-        }))
+    if gToken!= None:
+        try:
+            response = requests.post(f"{gOriginOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
+                "token": gToken,
+                "secret": gSecret
+            }))
 
-        objRes=response.json()["data"]
-        if objRes is None:
-            print("COULD NOT LOGIN, stopping it here")
-            sys.exit()
+            objRes=response.json()["data"]
+            if objRes is None:
+                print("COULD NOT LOGIN, stopping it here")
+                sys.exit()
+            print("We got an authentication token into OSAIS")
+            gAuthToken=objRes["authToken"]    
+        except Exception as err:
+            raise err
 
-        print("We got an authentication token into OSAIS")
-        gAuthToken=objRes["authToken"]    
+    if gTokenLocal!= None:
+        try:
+            response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
+                "token": gTokenLocal,
+                "secret": gSecretLocal
+            }))
 
-    except Exception as err:
-        raise err
-
-    try:
-        response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/login", headers=headers, data=json.dumps({
-            "token": gTokenLocal,
-            "secret": gSecretLocal
-        }))
-
-        objRes=response.json()["data"]
-        if objRes is None:
-            print("COULD NOT LOGIN into OSAIS Local")
-
-        print("We got an authentication token into OSAIS Local (debug)")
-        gAuthTokenLocal=objRes["authToken"]    
-
-    except Exception as err:
-        return True
+            objRes=response.json()["data"]
+            if objRes is None:
+                print("COULD NOT LOGIN into OSAIS Local")
+            print("We got an authentication token into OSAIS Local (debug)")
+            gAuthTokenLocal=objRes["authToken"]    
+        except Exception as err:
+            return True
 
     return True
 
@@ -355,15 +365,20 @@ def osais_getDirectoryListing(_dir) :
 def osais_authenticateAI():
     global gIsVirtualAI
     global gOriginOSAIS
+    global gIsScheduled
+    
+    Resp={"data": None}
     if gIsVirtualAI:
 
-        _registerVAI()
-        _loginVAI()
+        resp= _registerVAI()
+        resp=_loginVAI()
 
         # Run the scheduler
-        schedule.every().day.at("10:30").do(_loginVAI)
+        if gIsScheduled==False:
+            gIsScheduled=True
+            schedule.every().day.at("10:30").do(_loginVAI)
 
-    return True
+    return resp
 
 def osais_runAI(fn_run, _args):
     _input=None
@@ -515,4 +530,5 @@ def getStageParams(_args, _stage) :
 ## ------------------------------------------------------------------------
 
 print("AI ready for processing requests...")
+
 
