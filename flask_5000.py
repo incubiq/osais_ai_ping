@@ -16,29 +16,35 @@
 ##   Test it : http://localhost:5001/
 ##
 
-
-## ------------------------------------------------------------------------
-#       init app
-## ------------------------------------------------------------------------
-
-## init app
 APP_ENGINE="ping"
-from flask import Flask, request, jsonify
-app = Flask(APP_ENGINE)
+
+## ------------------------------------------------------------------------
+#       init config
+## ------------------------------------------------------------------------
+
+import os
+gClientToken = os.environ.get('CLIENT_TOKEN')         ## getting the client_token from the docker config (this AI belongs to the client)
+gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
+gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
+if os.environ.get("TERM_PROGRAM")=="vscode":          ## local when in debug
+    with open("env_local", "r") as f:
+        content = f.read()
+    variables = content.split("\n")
+    for var in variables:
+        if var!="":
+            key, value = var.split("=")
+            if key == "CLIENT_TOKEN":
+                gClientToken = value
+            elif key == "IS_LOCAL":
+                gIsLocal = (value=="True")
+            elif key == "IS_VIRTUALAI":
+                gIsVirtualAI = (value=="True")
 
 ## ------------------------------------------------------------------------
 #       connect the AI with OSAIS
 ## ------------------------------------------------------------------------
 
-import os
 from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_loadConfig, osais_authenticateAI
-
-gClientToken = os.environ.get('CLIENT_TOKEN')         ## getting the client_token from the docker config (this AI belongs to the client)
-gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
-gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
-if os.environ.get("TERM_PROGRAM")=="vscode":          ## local when in debug
-    gIsLocal = True
-    gIsVirtualAI = True
 
 gConfig=osais_loadConfig(APP_ENGINE)
 gPortAI = gConfig["port"]
@@ -64,6 +70,13 @@ osais_initializeAI({
     "isLocal": gIsLocal,   
     "isVirtualAI": gIsVirtualAI
 })
+
+## ------------------------------------------------------------------------
+#       init app (flask)
+## ------------------------------------------------------------------------
+
+from flask import Flask, request, jsonify
+app = Flask(APP_ENGINE)
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)

@@ -34,7 +34,7 @@ docker build -t <your_repo>:ai_ping .
 docker push <your_repo>:ai_ping
 
 // on windows
-docker run -d --name ai_ping  --env-file docker_env_ping --publish 5001:5000 yeepeekoo/my_images:ai_ping
+docker run -d --name ai_ping  --env-file env_docker --publish 5001:5000 yeepeekoo/my_images:ai_ping
 
 the docker_env_ping must contain reference to the client owning this virtual AI, and settings for acting as a remote Virtual AI
 <
