@@ -466,6 +466,7 @@ def osais_runAI(fn_run, _args):
     gIsBusy=False
     end_date = datetime.datetime.utcnow()
     cost = int((end_date - beg_date).total_seconds() * 100)/10
+    _addCost(cost)
 
     ## notify end
     StageParam={"stage": AI_PROGRESS_AI_STOPPED,  "descr": "end of AI job...", "cost": cost}
