@@ -36,6 +36,9 @@ from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwar
 gClientToken = os.environ.get('CLIENT_TOKEN')         ## getting the client_token from the docker config (this AI belongs to the client)
 gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
 gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
+if os.environ.get("TERM_PROGRAM")=="vscode":          ## local when in debug
+    gIsLocal = True
+    gIsVirtualAI = True
 
 gConfig=osais_loadConfig(APP_ENGINE)
 gPortAI = gConfig["port"]

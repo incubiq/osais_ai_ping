@@ -56,6 +56,11 @@ gIsLocal=False                  ## are we working locally (localhost server)?
 gAProcessed=[]                  ## all token being sent to processing (never call twice for same)
 gIsScheduled=False              ## do we have a scheduled event running?
 
+## run timmes
+gIsBusy=False                   ## True if AI busy processing
+gDefaultCost=1                  ## default cost value in secs (will get overriden fast, this value is no big deal)
+gaProcessTime=[]                ## Array of last x (10/20?) time spent for processed requests 
+
 AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
 AI_PROGRESS_ARGS=1
@@ -73,12 +78,16 @@ def _loadConfig(_name):
     global gVersion
     global gDescription
     global gOrigin
+    global gDefaultCost
 
     fJSON = open(f'{_name}.json')
     _json = json.load(fJSON)
     gVersion=_json["version"]
     gDescription=_json["description"]
     gOrigin=_json["origin"]
+    _cost=_json["default_cost"]
+    if _cost!=None:
+        gDefaultCost=_cost
     return _json
 
 ## get the full AI config, including JSON params and hardware info
@@ -95,7 +104,7 @@ def _getFullConfig(_name) :
     global gIsVirtualAI
     global gIPLocal
     global gExtIP
-
+ 
     _ip=gExtIP
     if gIsVirtualAI:
         _ip=gIPLocal
@@ -116,6 +125,24 @@ def _getFullConfig(_name) :
         "port": gPortAI,
         "engine": _json
     }
+
+## init the dafault cost array
+def _initializeCost() :
+    global gDefaultCost
+    global gaProcessTime
+    gaProcessTime=[gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost]
+
+## init the dafault cost array
+def _addCost(_cost) :
+    global gaProcessTime
+    gaProcessTime.insert(_cost, 0)
+    gaProcessTime.pop()
+
+## init the dafault cost array
+def _getAverageCost() :
+    global gaProcessTime
+    average = sum(gaProcessTime) / len(gaProcessTime)
+    return average
 
 ## notify the gateway of our AI config file
 def _notifyGateway() : 
@@ -335,6 +362,10 @@ def osais_initializeAI(params):
         osais_resetGateway(gOriginGateway)
         if gOriginGateway!=None:
             print("=> Running "+gName+" AI as a server connected to local Gateway "+gOriginGateway)
+
+    ## init default cost
+    _initializeCost()
+
     return True
 
 ## info about this AI
@@ -342,15 +373,22 @@ def osais_getInfo() :
     global gExtIP
     global gPortAI
     global gName
+    global gVersion
     global gIsDocker
     global gMachineName
+    global gClientToken
+    global gIsBusy
     return {
         "name": gName,
+        "version": gVersion,
         "location": f"{gExtIP}:{gPortAI}/",
         "isRunning": True,    
         "isDocker": gIsDocker,    
         "lastActive_at": gLastchecked_at,
-        "machine": gMachineName
+        "machine": gMachineName,
+        "owner": gClientToken, 
+        "isAvailable": (gIsBusy==False),
+        "averageResponseTime": _getAverageCost(), 
     }
 
 ## info about harware this AI is running on
@@ -381,6 +419,11 @@ def osais_authenticateAI():
     return resp
 
 def osais_runAI(fn_run, _args):
+    global gIsBusy
+
+    gIsBusy=True
+    beg_date = datetime.datetime.utcnow()
+
     _input=None
     aFinalArg=_getArgs(_args)
 
@@ -420,8 +463,12 @@ def osais_runAI(fn_run, _args):
     ## run the AI
     fn_run(aFinalArg)
 
+    gIsBusy=False
+    end_date = datetime.datetime.utcnow()
+    cost = int((end_date - beg_date).total_seconds() * 100)/10
+
     ## notify end
-    StageParam={"stage": AI_PROGRESS_AI_STOPPED,  "descr": "end of AI job..."}
+    StageParam={"stage": AI_PROGRESS_AI_STOPPED,  "descr": "end of AI job...", "cost": cost}
     osais_notify(CredsParam, MorphingParam , StageParam)
 
     return "request processed!"
@@ -482,6 +529,9 @@ def osais_notify(CredParam, MorphingParam, StageParam):
             "filename": _filename
         }
     }
+    if (StageParam["cost"]!=None):
+          objParam["response"]["cost"]= str(StageParam["cost"])
+    
     response = requests.post(api_url, headers=headers, data=json.dumps(objParam) )
     objRes=response.json()
 
