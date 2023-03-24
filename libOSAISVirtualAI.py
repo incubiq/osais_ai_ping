@@ -58,7 +58,7 @@ gIsScheduled=False              ## do we have a scheduled event running?
 
 ## run timmes
 gIsBusy=False                   ## True if AI busy processing
-gDefaultCost=1                  ## default cost value in secs (will get overriden fast, this value is no big deal)
+gDefaultCost=float(1)           ## default cost value in secs (will get overriden fast, this value is no big deal)
 gaProcessTime=[]                ## Array of last x (10/20?) time spent for processed requests 
 
 AI_PROGRESS_ERROR=-1
@@ -87,7 +87,7 @@ def _loadConfig(_name):
     gOrigin=_json["origin"]
     _cost=_json["default_cost"]
     if _cost!=None:
-        gDefaultCost=_cost
+        gDefaultCost=float(_cost)
     return _json
 
 ## get the full AI config, including JSON params and hardware info
@@ -117,7 +117,7 @@ def _getFullConfig(_name) :
         gpuName=objCudaInfo["name"]
 
     return {
-        "client_tocken": gClientToken,
+        "client_token": gClientToken,
         "os": get_os_name(),
         "gpu": gpuName,
         "machine": get_machine_name(),
@@ -130,12 +130,13 @@ def _getFullConfig(_name) :
 def _initializeCost() :
     global gDefaultCost
     global gaProcessTime
-    gaProcessTime=[gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost]
+    from array import array
+    gaProcessTime=array('f', [gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost,gDefaultCost])
 
 ## init the dafault cost array
 def _addCost(_cost) :
     global gaProcessTime
-    gaProcessTime.insert(_cost, 0)
+    gaProcessTime.insert(0, _cost)
     gaProcessTime.pop()
 
 ## init the dafault cost array
@@ -340,6 +341,8 @@ def osais_initializeAI(params):
     gIsLocal=params["isLocal"]
     global gIsVirtualAI
     gIsVirtualAI=params["isVirtualAI"]
+    global gClientToken
+    gClientToken=params["clientToken"]
 
     ## where is OSAIS for us then?
     global gExtIP
@@ -422,7 +425,7 @@ def osais_runAI(fn_run, _args):
     global gIsBusy
 
     gIsBusy=True
-    beg_date = datetime.datetime.utcnow()
+    beg_date = datetime.utcnow()
 
     _input=None
     aFinalArg=_getArgs(_args)
@@ -464,8 +467,8 @@ def osais_runAI(fn_run, _args):
     fn_run(aFinalArg)
 
     gIsBusy=False
-    end_date = datetime.datetime.utcnow()
-    cost = int((end_date - beg_date).total_seconds() * 100)/10
+    end_date = datetime.utcnow()
+    cost = (end_date - beg_date).total_seconds()
     _addCost(cost)
 
     ## notify end
@@ -530,8 +533,9 @@ def osais_notify(CredParam, MorphingParam, StageParam):
             "filename": _filename
         }
     }
-    if (StageParam["cost"]!=None):
-          objParam["response"]["cost"]= str(StageParam["cost"])
+
+    if "cost" in StageParam:
+        objParam["response"]["cost"]= str(StageParam["cost"])
     
     response = requests.post(api_url, headers=headers, data=json.dumps(objParam) )
     objRes=response.json()
