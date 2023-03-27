@@ -24,7 +24,8 @@ gVersion="0.0.0"                ## name of this AI's version (version of engine)
 gDescription=None               ## AI's quick description
 gOrigin=None                    ## where this AI came from (on internet)
 gMachineName=get_machine_name() ## the name of the machine (will change all the time if inside docker, ot keep same if running on local server)
-gLastchecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
+gLastChecked_at=datetime.utcnow()  ## when was this AI last used for processing anything
+gLastProcessStart_at=None       ## when was this AI last start event for processing anything
 
 ## authenticate into OSAIS
 gAuthToken=None                 ## auth token into OSAIS for when working as virtual Ai
@@ -381,17 +382,24 @@ def osais_getInfo() :
     global gMachineName
     global gClientToken
     global gIsBusy
+    global gLastProcessStart_at
+    global gLastChecked_at
+
+    objConf=_getFullConfig(gName)
+
     return {
         "name": gName,
         "version": gVersion,
         "location": f"{gExtIP}:{gPortAI}/",
         "isRunning": True,    
         "isDocker": gIsDocker,    
-        "lastActive_at": gLastchecked_at,
+        "lastActive_at": gLastChecked_at,
+        "lastProcessStart_at": gLastProcessStart_at,
         "machine": gMachineName,
         "owner": gClientToken, 
         "isAvailable": (gIsBusy==False),
         "averageResponseTime": _getAverageCost(), 
+        "json": objConf
     }
 
 ## info about harware this AI is running on
@@ -451,6 +459,10 @@ def osais_runAI(fn_run, _args):
     if _uid in gAProcessed:
         return  "not processing, already tried..."
     
+    ## processing accepted
+    global gLastProcessStart_at
+    gLastProcessStart_at=datetime.utcnow()
+
     global gName 
     gAProcessed.append(_uid)
     _token=_args.get('-t')
@@ -486,8 +498,8 @@ def osais_notify(CredParam, MorphingParam, StageParam):
     global gIsVirtualAI
     global gAuthToken
     global gAuthTokenLocal
-    global gLastchecked_at
-    gLastchecked_at = datetime.utcnow()
+    global gLastChecked_at
+    gLastChecked_at = datetime.utcnow()
 
     # notification console log
     merged = dict()
