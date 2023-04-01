@@ -11,53 +11,65 @@ import os
 import platform
 import sys
 import ctypes
+import asyncio
+import threading
 
 cuda=0                          ## from cuda import cuda, nvrtc
 gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
-gObserver=None
 
 ## ------------------------------------------------------------------------
 #       public fcts
 ## ------------------------------------------------------------------------
 
+
+def start_async_task(_fn, args):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(_fn(args))
+    try:
+        loop.run_forever()
+    finally:
+        loop.close()
+
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 class NewFileHandler(FileSystemEventHandler):
-    def __init__(self, fnOnFileCreated):
+    def __init__(self, fnOnFileCreated, _args):
         self.fnOnFileCreated = fnOnFileCreated
+        self._args = _args
 
     def on_created(self, event):
         if event.is_directory:
             return
         if event.event_type == 'created':
-            self.fnOnFileCreated(event.src_path)
+            self.fnOnFileCreated(event.src_path, self._args)
 
 ## watch directory and call back if file was created
-def start_watch_directory(path, fnOnFileCreated):
-    # do not allow two observers in parallel
-    global gObserver
-    if gObserver!=None:
-        return False
+def start_watch_directory(path, fnOnFileCreated, _args):
     
-    event_handler = NewFileHandler(fnOnFileCreated)
-    gObserver = Observer()
-    gObserver.schedule(event_handler, path, recursive=False)
-    gObserver.start()
+    event_handler = NewFileHandler(fnOnFileCreated, _args)
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=False)
+    observer.start()
     try:
-        while True:
-            gObserver.join(1)
+        thread = threading.Thread(target=start_async_task, args=(async_observe, observer))
+        thread.start()
+        
     except KeyboardInterrupt:
-        gObserver.stop()
-        gObserver=None
-    return True
+        observer.stop()
 
-def stop_watch_directory():
-    global gObserver
-    if gObserver==None:
-        return False
-    gObserver.stop()
-    gObserver=None
+    observer=None
+    return thread, observer
+
+async def async_observe(_observer):
+    _observer.join(1)
+
+async def stop_watch_directory(_thread, _observer):
+    ## stop this watch with a delay
+    await asyncio.sleep(3)
+    await _observer.stop()
+    threading.Timer(0, _thread.join).start()
     return True
 
 ## list content of a directory

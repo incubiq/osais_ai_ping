@@ -20,9 +20,10 @@
 #       init config
 ## ------------------------------------------------------------------------
 
-
 # select env file 
 import os
+import sys
+
 _envFile="env_local"
 if 'DOCKER_IMAGE' in os.environ:
     _envFile="env_docker"
@@ -51,7 +52,7 @@ gPortLocalOSAIS = 3022                      ## port of the local OSAIS (if runni
 gIPLocalOSAIS="0.0.0.0"                     ## IP of the local OSAIS (will be overwritten at init)
 
 ## register and login this AI
-osais_initializeAI({
+if osais_initializeAI({
     "username": gUsername,
     "engine": APP_ENGINE, 
     "port_ai": gPortAI, 
@@ -60,7 +61,8 @@ osais_initializeAI({
     "ip_local": gIPLocalOSAIS,
     "isLocal": gIsLocal,   
     "isVirtualAI": gIsVirtualAI
-})
+}) == False:
+    sys.exit(0)
 
 ## ------------------------------------------------------------------------
 #       init app (flask)
@@ -125,6 +127,8 @@ def test():
         ('url_upload', 'http://192.168.1.83:3022/uploads/client/clown.jpg'),
         ('-o', str(ts)+'.jpg'),
         ('-local', 'True'),
+        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
+        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
         ('-orig', 'http://192.168.1.83:3022/'),
     ])
     from _ping import fn_run

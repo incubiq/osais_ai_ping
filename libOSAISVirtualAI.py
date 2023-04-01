@@ -9,6 +9,7 @@ import json
 import sys
 import base64
 from datetime import datetime
+import argparse
 
 from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get_external_ip, get_container_ip, get_machine_name, get_os_name, getCudaInfo, downloadImage, start_watch_directory, stop_watch_directory
 
@@ -309,7 +310,7 @@ def _uploadImageToOSAIS(objParam, isLocal):
     return objRes    
 
 ## ------------------------------------------------------------------------
-#       public fcts
+#       public fcts - info / env / init
 ## ------------------------------------------------------------------------
 
 def osais_getEnv(_filename):
@@ -370,6 +371,44 @@ def osais_resetGateway(_localGateway):
     print("=> This AI is reset to talk to Gateway "+_localGateway)
     return True
 
+## info about this AI
+def osais_getInfo() :
+    global gExtIP
+    global gPortAI
+    global gName
+    global gVersion
+    global gIsDocker
+    global gMachineName
+    global gUsername
+    global gIsBusy
+    global gLastProcessStart_at
+    global gLastChecked_at
+
+    objConf=_getFullConfig(gName)
+
+    return {
+        "name": gName,
+        "version": gVersion,
+        "location": f"{gExtIP}:{gPortAI}/",
+        "isRunning": True,    
+        "isDocker": gIsDocker,    
+        "lastActive_at": gLastChecked_at,
+        "lastProcessStart_at": gLastProcessStart_at,
+        "machine": gMachineName,
+        "owner": gUsername, 
+        "isAvailable": (gIsBusy==False),
+        "averageResponseTime": _getAverageCost(), 
+        "json": objConf["engine"]
+    }
+
+## info about harware this AI is running on
+def osais_getHarwareInfo() :
+    return getHostInfo()
+
+## get list of files in a dir (check what was generated)
+def osais_getDirectoryListing(_dir) :
+    return listDirContent(_dir)
+
 # Init the Virtual AI
 def osais_initializeAI(params):
     global gPortAI
@@ -420,6 +459,7 @@ def osais_initializeAI(params):
             osais_authenticateAI()
         except Exception as err:
             print("=> CRITICAL: Could not connect virtual AI "+gName+ " to OSAIS")
+            return False
 
         if gAuthToken!=None:
             print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginOSAIS)
@@ -429,8 +469,10 @@ def osais_initializeAI(params):
         try:
             osais_resetGateway(gOriginGateway)
             print("=> Running "+gName+" AI as a server connected to local Gateway "+gOriginGateway)
+        
         except Exception as err:
             print("CRITICAL: could not notify Gateway at "+gOriginGateway)
+            return False
 
     ## init default cost
     _initializeCost()
@@ -438,43 +480,9 @@ def osais_initializeAI(params):
     print("\r\n")
     return True
 
-## info about this AI
-def osais_getInfo() :
-    global gExtIP
-    global gPortAI
-    global gName
-    global gVersion
-    global gIsDocker
-    global gMachineName
-    global gUsername
-    global gIsBusy
-    global gLastProcessStart_at
-    global gLastChecked_at
-
-    objConf=_getFullConfig(gName)
-
-    return {
-        "name": gName,
-        "version": gVersion,
-        "location": f"{gExtIP}:{gPortAI}/",
-        "isRunning": True,    
-        "isDocker": gIsDocker,    
-        "lastActive_at": gLastChecked_at,
-        "lastProcessStart_at": gLastProcessStart_at,
-        "machine": gMachineName,
-        "owner": gUsername, 
-        "isAvailable": (gIsBusy==False),
-        "averageResponseTime": _getAverageCost(), 
-        "json": objConf["engine"]
-    }
-
-## info about harware this AI is running on
-def osais_getHarwareInfo() :
-    return getHostInfo()
-
-## get list of files in a dir (check what was generated)
-def osais_getDirectoryListing(_dir) :
-    return listDirContent(_dir)
+## ------------------------------------------------------------------------
+#       public fcts - Authentication
+## ------------------------------------------------------------------------
 
 # Authenticate the Virtual AI into OSAIS
 def osais_authenticateAI():
@@ -497,6 +505,25 @@ def osais_authenticateAI():
             schedule.every().day.at("10:30").do(_loginVAI)
 
     return resp
+
+## ------------------------------------------------------------------------
+#       public fcts - Run the AI
+## ------------------------------------------------------------------------
+
+def osais_initParser():
+    # Create the parser
+    vq_parser = argparse.ArgumentParser(description='Arg parser init by OSAIS')
+
+    # Add the AI Gateway / OpenSourceAIs arguments
+    vq_parser.add_argument("-orig",  "--origin", type=str, help="AI Gateway server origin", default="http://localhost:3654/", dest='OSAIS_origin')     ##  this is for comms with AI Gateway
+    vq_parser.add_argument("-t",  "--token", type=str, help="OpenSourceAIs token", default="0", dest='tokenAI')               ##  this is for comms with OpenSourceAIs
+    vq_parser.add_argument("-u",  "--username", type=str, help="OpenSourceAIs username", default="", dest='username')       ##  this is for comms with OpenSourceAIs
+    vq_parser.add_argument("-uid",  "--unique_id", type=int, help="Unique ID of this AI session", default=0, dest='uid')    ##  this is for comms with OpenSourceAIs
+    vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
+    vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
+    vq_parser.add_argument("-local", "--islocal", type=bool, help="is local or prod?", default=False, dest='isLocal')
+    vq_parser.add_argument("-cycle", "--cycle", type=int, help="cycle", default=0, dest='cycle')
+    return vq_parser
 
 def osais_runAI(*args):
     global gIsBusy
@@ -537,32 +564,35 @@ def osais_runAI(*args):
 
     global gName 
     gAProcessed.append(_uid)
-    _token=_args.get('-t')
-
-    isLocal=(_args.get('-local')=="True")
 
     ## notify start
-    CredsParam={"engine": gName, "tokenAI": _token, "username": _args.get('-u'), "isLocal": isLocal}
-    MorphingParam={"uid": _uid, "cycle": 0, "filename": _input}
-    StageParam={"stage": AI_PROGRESS_AI_STARTED, "descr": "AI is ready to start"}
+    CredsParam=getCredsParams(_args)
+    MorphingParam=getMorphingParams(_args)
+    StageParam=getStageParams(_args, AI_PROGRESS_AI_STARTED, 0)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
     ## start watch file creation
     _output=_getOutputDir(_args)
-    ## start_watch_directory(_output, osais_onNotifyFileCreated)
+    _thread, _observer=start_watch_directory(_output, osais_onNotifyFileCreated, _args)
 
     ## run the AI
+    _parser=osais_initParser()
     response=None
+
+    StageParam=getStageParams(_args, AI_PROGRESS_INIT_IMAGE, 0)
+    osais_notify(CredsParam, MorphingParam , StageParam)
+
     if len(args)==2:
-        response=fn_run(aFinalArg)
+        response=fn_run(_parser, aFinalArg)
     else:
         if len(args)==3:
-            response=fn_run(aFinalArg, args[2])
+            response=fn_run(_parser, aFinalArg, args[2])
         else:
-            response=fn_run(aFinalArg, args[2], args[3])
+            response=fn_run(_parser, aFinalArg, args[2], args[3])
 
     ## stop watch file creation
-    stop_watch_directory()
+    if _observer!=None:
+        stop_watch_directory(_thread, _observer) 
 
     gIsBusy=False
     end_date = datetime.utcnow()
@@ -570,7 +600,7 @@ def osais_runAI(*args):
     _addCost(cost)
 
     ## notify end
-    StageParam={"stage": AI_PROGRESS_AI_STOPPED,  "descr": "end of AI job...", "cost": cost}
+    StageParam=getStageParams(_args, AI_PROGRESS_AI_STOPPED, cost)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
     ## default OK response if the AI does not send any
@@ -578,8 +608,12 @@ def osais_runAI(*args):
         response=True
     return response
 
-def osais_onNotifyFileCreated(_filename):
-    print("notified file Created ("+_filename+")")
+def osais_onNotifyFileCreated(_filename, _args):
+    _args["filename"]=_filename
+    _stageParam=getStageParams(_args, AI_PROGRESS_DONE_IMAGE, 0)
+    _morphingParam=getMorphingParams(_args)
+    _credsParam=getCredsParams(_args)
+    osais_notify(_credsParam, _morphingParam, _stageParam)            # OSAIS Notification
     return True
 
 # Direct Notify OSAIS 
@@ -667,15 +701,26 @@ def osais_notify(CredParam, MorphingParam, StageParam):
 
 def getCredsParams(_args) :
     global gName
-    return {"engine": gName, "tokenAI": _args.tokenAI, "username": _args.username, "isLocal": _args.isLocal} 
+    return {
+        "engine": gName, 
+        "tokenAI": _args.get('-t'), 
+        "username": _args.get('-u'), 
+        "isLocal": _args.get('-local')=="True"
+    } 
 
 def getMorphingParams(_args) :
-    _initImg="default"
-    if hasattr(_args, 'init_image') and _args.init_image:
-        _initImg=_args.init_image
-    return {"uid": _args.uid, "cycle": _args.cycle, "filename":_initImg, "odir":_args.outdir}
+    _tmpF=_args.get('-filename')
+    if _tmpF==None:
+        _tmpF="default"
 
-def getStageParams(_args, _stage) :
+    return {
+        "uid": _args.get('-uid'), 
+        "cycle": _args.get('-cycle'), 
+        "filename": _tmpF, 
+        "odir": _getOutputDir(_args)
+    }
+
+def getStageParams(_args, _stage, _cost) :
     if _stage==AI_PROGRESS_ARGS:
         return {"stage": AI_PROGRESS_AI_STARTED, "descr":"Just parsed AI params"}
     if _stage==AI_PROGRESS_ERROR:
@@ -683,9 +728,9 @@ def getStageParams(_args, _stage) :
     if _stage==AI_PROGRESS_AI_STARTED:
         return {"stage": AI_PROGRESS_AI_STARTED, "descr":"AI started"}
     if _stage==AI_PROGRESS_AI_STOPPED:
-        return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped"}
+        return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped", "cost": _cost}
     if _stage==AI_PROGRESS_INIT_IMAGE:
-        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.output}
+        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.get('-o')}
     if _stage==AI_PROGRESS_DONE_IMAGE:
         return {"stage": AI_PROGRESS_DONE_IMAGE, "descr":"copied input image to destination image"}
     return {"stage": AI_PROGRESS_ERROR, "descr":"error"}
