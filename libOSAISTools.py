@@ -9,14 +9,56 @@ from datetime import datetime
 import pkg_resources
 import os
 import platform
+import sys
 import ctypes
 
 cuda=0                          ## from cuda import cuda, nvrtc
 gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
+gObserver=None
 
 ## ------------------------------------------------------------------------
 #       public fcts
 ## ------------------------------------------------------------------------
+
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
+class NewFileHandler(FileSystemEventHandler):
+    def __init__(self, fnOnFileCreated):
+        self.fnOnFileCreated = fnOnFileCreated
+
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        if event.event_type == 'created':
+            self.fnOnFileCreated(event.src_path)
+
+## watch directory and call back if file was created
+def start_watch_directory(path, fnOnFileCreated):
+    # do not allow two observers in parallel
+    global gObserver
+    if gObserver!=None:
+        return False
+    
+    event_handler = NewFileHandler(fnOnFileCreated)
+    gObserver = Observer()
+    gObserver.schedule(event_handler, path, recursive=False)
+    gObserver.start()
+    try:
+        while True:
+            gObserver.join(1)
+    except KeyboardInterrupt:
+        gObserver.stop()
+        gObserver=None
+    return True
+
+def stop_watch_directory():
+    global gObserver
+    if gObserver==None:
+        return False
+    gObserver.stop()
+    gObserver=None
+    return True
 
 ## list content of a directory
 def listDirContent(_dir):

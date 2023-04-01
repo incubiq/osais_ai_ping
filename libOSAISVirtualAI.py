@@ -10,14 +10,14 @@ import sys
 import base64
 from datetime import datetime
 
-from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get_external_ip, get_machine_name, get_os_name, getCudaInfo, downloadImage
+from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get_external_ip, get_container_ip, get_machine_name, get_os_name, getCudaInfo, downloadImage, start_watch_directory, stop_watch_directory
 
 ## ------------------------------------------------------------------------
 #       all global vars
 ## ------------------------------------------------------------------------
 
 gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
-gClientToken=None               ## token of the client (necessary to claim VirtAI regs)
+gUsername=None                  ## user owning this AI (necessary to claim VirtAI regs)
 
 gName=None                      ## name of this AI (name of engine)
 gVersion="0.0.0"                ## name of this AI's version (version of engine)
@@ -93,7 +93,7 @@ def _loadConfig(_name):
 
 ## get the full AI config, including JSON params and hardware info
 def _getFullConfig(_name) :
-    global gClientToken
+    global gUsername
     global gPortAI
     global gName
     global gToken
@@ -118,7 +118,7 @@ def _getFullConfig(_name) :
         gpuName=objCudaInfo["name"]
 
     return {
-        "client_token": gClientToken,
+        "username": gUsername,
         "os": get_os_name(),
         "gpu": gpuName,
         "machine": get_machine_name(),
@@ -146,6 +146,14 @@ def _getAverageCost() :
     average = sum(gaProcessTime) / len(gaProcessTime)
     return average
 
+## where is the output dir?
+def _getOutputDir(_args):
+    _output="./_output"
+    _tmpO=_args.get('-odir')
+    if _tmpO!=None:
+        _output=_tmpO
+    return _output
+
 ## notify the gateway of our AI config file
 def _notifyGateway() : 
     global gName
@@ -162,9 +170,8 @@ def _notifyGateway() :
         response = requests.post(f"{gOriginGateway}api/v1/public/ai/config", headers=headers, data=json.dumps(objParam))
         objRes=response.json()["data"]
         if objRes is None:
-            print("Warning: could not notify Gateway")
+            raise ValueError("CRITICAL: could not notify Gateway")
 
-        print("gateway is notified of AI settings")
     except Exception as err:
         raise err
     return True
@@ -202,18 +209,18 @@ def _registerVAI():
             raise err
 
     ## reg with Local OSAIS (debug)
-    try:
-        response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
-        objRes=response.json()["data"]
-        if objRes is None:
-            print("COULD NOT REGISTER with debug")
+    else:
+        try:
+            response = requests.post(f"{gOriginLocalOSAIS}api/v1/public/virtualai/register", headers=headers, data=json.dumps(objParam))
+            objRes=response.json()["data"]
+            if objRes is None:
+                print("COULD NOT REGISTER with debug")
 
-        gTokenLocal=objRes["token"]
-        gSecretLocal=objRes["secret"]
-        print("We are REGISTERED with OSAIS Local (debug)")
-    except Exception as err:
-        ## nothing 
-        return True
+            gTokenLocal=objRes["token"]
+            gSecretLocal=objRes["secret"]
+            print("We are REGISTERED with OSAIS Local (debug)")
+        except Exception as err:
+            raise err
 
     return True
 
@@ -305,6 +312,37 @@ def _uploadImageToOSAIS(objParam, isLocal):
 #       public fcts
 ## ------------------------------------------------------------------------
 
+def osais_getEnv(_filename):
+    import os
+    global gUsername
+    global gIsVirtualAI
+    global gIsLocal
+    global gName
+    gUsername = os.environ.get('USERNAME')                ## getting the username from the docker config (this AI belongs to the User)
+    gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
+    gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
+    if os.environ.get("TERM_PROGRAM")=="vscode":          ## local when in debug
+        with open(_filename, "r") as f:
+            content = f.read()
+        variables = content.split("\n")
+        for var in variables:
+            if var!="":
+                key, value = var.split("=")
+                if key == "USERNAME":
+                    gUsername = value
+                elif key == "IS_LOCAL":
+                    gIsLocal = (value=="True")
+                elif key == "IS_VIRTUALAI":
+                    gIsVirtualAI = (value=="True")
+                elif key == "ENGINE":
+                    gName = value
+    return {
+        "username": gUsername,
+        "isLocal": gIsLocal,
+        "isVirtualAI": gIsVirtualAI,
+        "name": gName
+    }
+
 ## load the config of this AI
 def osais_loadConfig(_name): 
     return _loadConfig(_name)
@@ -315,14 +353,20 @@ def osais_resetOSAIS(_locationProd, _localtionDebug):
     global gOriginLocalOSAIS
     gOriginOSAIS=_locationProd
     gOriginLocalOSAIS=_localtionDebug
-    print("=> This AI is reset to talk to PROD "+gOriginOSAIS)
-    print("=> This AI is reset to talk to DEBUG "+gOriginLocalOSAIS+"\r\n")
+    if _locationProd!=None:
+        print("=> This AI is reset to talk to PROD "+gOriginOSAIS)
+    if _localtionDebug!=None:
+        print("=> This AI is reset to talk to DEBUG "+gOriginLocalOSAIS+"\r\n")
     return True
 
 def osais_resetGateway(_localGateway):
     global gOriginGateway
     gOriginGateway=_localGateway
-    _notifyGateway()
+    try:
+        _notifyGateway()
+    except Exception as err:
+        raise err
+    
     print("=> This AI is reset to talk to Gateway "+_localGateway)
     return True
 
@@ -342,8 +386,8 @@ def osais_initializeAI(params):
     gIsLocal=params["isLocal"]
     global gIsVirtualAI
     gIsVirtualAI=params["isVirtualAI"]
-    global gClientToken
-    gClientToken=params["clientToken"]
+    global gUsername
+    gUsername=params["username"]
 
     ## where is OSAIS for us then?
     global gExtIP
@@ -353,23 +397,45 @@ def osais_initializeAI(params):
     global gAuthTokenLocal
     global gOriginOSAIS
     global gOriginLocalOSAIS
+
+    print("\r\n===== Config =====")
+    print("is Local: "+str(gIsLocal))
+    print("is Virtual: "+str(gIsVirtualAI))
+    print("owned by client: "+str(gUsername))
+    print("===== /Config =====\r\n")
+
+
+    ## put back local IP where it can be called...
+    if gIsLocal:
+        gIPLocal=get_container_ip()
+
     gOriginGateway=f"http://{gIPLocal}:{gPortGateway}/"         ## config for local gateway (local and not virtual)
 
     if gIsVirtualAI:
-        osais_resetOSAIS("https://opensourceais.com/", f"http://{gIPLocal}:{gPortLocalOSAIS}/")
-        osais_authenticateAI()
+        if gIsLocal:
+            osais_resetOSAIS(None, f"http://{gIPLocal}:{gPortLocalOSAIS}/")
+        else:
+            osais_resetOSAIS("https://opensourceais.com/", None)
+        try:
+            osais_authenticateAI()
+        except Exception as err:
+            print("=> CRITICAL: Could not connect virtual AI "+gName+ " to OSAIS")
+
         if gAuthToken!=None:
             print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginOSAIS)
         if gAuthTokenLocal!=None:
             print("=> Running "+gName+" AI as a virtual AI connected to: "+gOriginLocalOSAIS)
     else:
-        osais_resetGateway(gOriginGateway)
-        if gOriginGateway!=None:
+        try:
+            osais_resetGateway(gOriginGateway)
             print("=> Running "+gName+" AI as a server connected to local Gateway "+gOriginGateway)
+        except Exception as err:
+            print("CRITICAL: could not notify Gateway at "+gOriginGateway)
 
     ## init default cost
     _initializeCost()
 
+    print("\r\n")
     return True
 
 ## info about this AI
@@ -380,7 +446,7 @@ def osais_getInfo() :
     global gVersion
     global gIsDocker
     global gMachineName
-    global gClientToken
+    global gUsername
     global gIsBusy
     global gLastProcessStart_at
     global gLastChecked_at
@@ -396,10 +462,10 @@ def osais_getInfo() :
         "lastActive_at": gLastChecked_at,
         "lastProcessStart_at": gLastProcessStart_at,
         "machine": gMachineName,
-        "owner": gClientToken, 
+        "owner": gUsername, 
         "isAvailable": (gIsBusy==False),
         "averageResponseTime": _getAverageCost(), 
-        "json": objConf
+        "json": objConf["engine"]
     }
 
 ## info about harware this AI is running on
@@ -419,9 +485,12 @@ def osais_authenticateAI():
     Resp={"data": None}
     if gIsVirtualAI:
 
-        resp= _registerVAI()
-        resp=_loginVAI()
-
+        try:
+            resp= _registerVAI()
+            resp=_loginVAI()
+        except Exception as err:
+            raise err
+        
         # Run the scheduler
         if gIsScheduled==False:
             gIsScheduled=True
@@ -429,8 +498,11 @@ def osais_authenticateAI():
 
     return resp
 
-def osais_runAI(fn_run, _args):
+def osais_runAI(*args):
     global gIsBusy
+
+    fn_run=args[0]
+    _args=args[1]
 
     gIsBusy=True
     beg_date = datetime.utcnow()
@@ -475,8 +547,22 @@ def osais_runAI(fn_run, _args):
     StageParam={"stage": AI_PROGRESS_AI_STARTED, "descr": "AI is ready to start"}
     osais_notify(CredsParam, MorphingParam , StageParam)
 
+    ## start watch file creation
+    _output=_getOutputDir(_args)
+    ## start_watch_directory(_output, osais_onNotifyFileCreated)
+
     ## run the AI
-    fn_run(aFinalArg)
+    response=None
+    if len(args)==2:
+        response=fn_run(aFinalArg)
+    else:
+        if len(args)==3:
+            response=fn_run(aFinalArg, args[2])
+        else:
+            response=fn_run(aFinalArg, args[2], args[3])
+
+    ## stop watch file creation
+    stop_watch_directory()
 
     gIsBusy=False
     end_date = datetime.utcnow()
@@ -487,7 +573,14 @@ def osais_runAI(fn_run, _args):
     StageParam={"stage": AI_PROGRESS_AI_STOPPED,  "descr": "end of AI job...", "cost": cost}
     osais_notify(CredsParam, MorphingParam , StageParam)
 
-    return "request processed!"
+    ## default OK response if the AI does not send any
+    if response==None:
+        response=True
+    return response
+
+def osais_onNotifyFileCreated(_filename):
+    print("notified file Created ("+_filename+")")
+    return True
 
 # Direct Notify OSAIS 
 def osais_notify(CredParam, MorphingParam, StageParam):
@@ -554,7 +647,10 @@ def osais_notify(CredParam, MorphingParam, StageParam):
 
     if StageParam["stage"]==AI_PROGRESS_DONE_IMAGE:
         if gIsVirtualAI==True:
-            _dirImage=f"./_output/{_filename}"
+            _dir=MorphingParam["odir"]
+            if _dir==None:
+                _dir="./_output/"
+            _dirImage=_dir+_filename
 
             with open(_dirImage, "rb") as image_file:
                 image_data = image_file.read()
@@ -574,7 +670,10 @@ def getCredsParams(_args) :
     return {"engine": gName, "tokenAI": _args.tokenAI, "username": _args.username, "isLocal": _args.isLocal} 
 
 def getMorphingParams(_args) :
-    return {"uid": _args.uid, "cycle": _args.cycle, "filename":_args.init_image}
+    _initImg="default"
+    if hasattr(_args, 'init_image') and _args.init_image:
+        _initImg=_args.init_image
+    return {"uid": _args.uid, "cycle": _args.cycle, "filename":_initImg, "odir":_args.outdir}
 
 def getStageParams(_args, _stage) :
     if _stage==AI_PROGRESS_ARGS:
@@ -596,6 +695,6 @@ def getStageParams(_args, _stage) :
 #       Init processing
 ## ------------------------------------------------------------------------
 
-print("AI ready for processing requests...")
+print("\r\nPython OSAIS Lib is loaded...")
 
 

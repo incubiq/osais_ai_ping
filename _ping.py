@@ -3,7 +3,7 @@
 ##      Entry of the AI_PING prog
 ##
 ##          - parse args
-##          - do ping (ie nothing...)
+##          - do ping (ie nothing, only copy an image to prove full way round works)
 ##
 
 import os
