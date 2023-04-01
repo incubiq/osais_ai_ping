@@ -86,8 +86,14 @@ def _loadConfig(_name):
     global gDefaultCost
     global gOutputSyntax
 
-    fJSON = open(f'{_name}.json')
-    _json = json.load(fJSON)
+    _json = None
+    try:
+        fJSON = open(f'{_name}.json')
+        _json = json.load(fJSON)
+    except Exception as err:
+        print("CRITICAL: No json config file for "+_name)
+        sys.exit()
+
     gVersion=_json["version"]
     gDescription=_json["description"]
     gOrigin=_json["origin"]
@@ -453,6 +459,8 @@ def osais_initializeAI(params):
     print("owned by client: "+str(gUsername))
     print("===== /Config =====\r\n")
 
+    ## make sure we have a config file
+    _loadConfig(gName)
 
     ## put back local IP where it can be called...
     if gIsLocal:
@@ -577,7 +585,7 @@ def osais_runAI(*args):
 
     ## notify start
     CredsParam=getCredsParams(_args)
-    MorphingParam=getMorphingParams(_args)
+    MorphingParam=getMorphingParams(_args, None)
     StageParam=getStageParams(_args, AI_PROGRESS_AI_STARTED, 0)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
@@ -619,9 +627,8 @@ def osais_runAI(*args):
     return response
 
 def osais_onNotifyFileCreated(_dir, _filename, _args):
-    _args["filename"]=_filename
     _stageParam=getStageParams(_args, AI_PROGRESS_DONE_IMAGE, 0)
-    _morphingParam=getMorphingParams(_args)
+    _morphingParam=getMorphingParams(_args, _filename)
     _credsParam=getCredsParams(_args)
     osais_notify(_credsParam, _morphingParam, _stageParam)            # OSAIS Notification
     return True
@@ -718,15 +725,14 @@ def getCredsParams(_args) :
         "isLocal": _args.get('-local')=="True"
     } 
 
-def getMorphingParams(_args) :
-    _tmpF=_args.get('filename')
-    if _tmpF==None:
-        _tmpF="default"
+def getMorphingParams(_args, _filename) :
+    if _filename==None:
+        _filename="default"
 
     return {
         "uid": _args.get('-uid'), 
         "cycle": _args.get('-cycle'), 
-        "filename": _tmpF, 
+        "filename": _filename, 
         "odir": _getOutputDir(_args)
     }
 
