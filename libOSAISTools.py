@@ -43,7 +43,7 @@ class NewFileHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         if event.event_type == 'created':
-            self.fnOnFileCreated(event.src_path, self._args)
+            self.fnOnFileCreated(os.path.dirname(event.src_path), os.path.basename(event.src_path), self._args)
 
 ## watch directory and call back if file was created
 def start_watch_directory(path, fnOnFileCreated, _args):

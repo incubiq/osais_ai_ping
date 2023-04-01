@@ -58,10 +58,13 @@ gIsLocal=False                  ## are we working locally (localhost server)?
 gAProcessed=[]                  ## all token being sent to processing (never call twice for same)
 gIsScheduled=False              ## do we have a scheduled event running?
 
-## run timmes
+## run times
 gIsBusy=False                   ## True if AI busy processing
 gDefaultCost=float(1)           ## default cost value in secs (will get overriden fast, this value is no big deal)
 gaProcessTime=[]                ## Array of last x (10/20?) time spent for processed requests 
+
+## processing specifics
+gOutputSyntax=None 
 
 AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
@@ -81,6 +84,7 @@ def _loadConfig(_name):
     global gDescription
     global gOrigin
     global gDefaultCost
+    global gOutputSyntax
 
     fJSON = open(f'{_name}.json')
     _json = json.load(fJSON)
@@ -90,6 +94,12 @@ def _loadConfig(_name):
     _cost=_json["default_cost"]
     if _cost!=None:
         gDefaultCost=float(_cost)
+
+    ## what s the AI expected tax for the output?
+    for param in _json["params"]:
+        if param["in"] == "output":
+            gOutputSyntax=param["out"]
+
     return _json
 
 ## get the full AI config, including JSON params and hardware info
@@ -608,7 +618,7 @@ def osais_runAI(*args):
         response=True
     return response
 
-def osais_onNotifyFileCreated(_filename, _args):
+def osais_onNotifyFileCreated(_dir, _filename, _args):
     _args["filename"]=_filename
     _stageParam=getStageParams(_args, AI_PROGRESS_DONE_IMAGE, 0)
     _morphingParam=getMorphingParams(_args)
@@ -709,7 +719,7 @@ def getCredsParams(_args) :
     } 
 
 def getMorphingParams(_args) :
-    _tmpF=_args.get('-filename')
+    _tmpF=_args.get('filename')
     if _tmpF==None:
         _tmpF="default"
 
@@ -730,7 +740,7 @@ def getStageParams(_args, _stage, _cost) :
     if _stage==AI_PROGRESS_AI_STOPPED:
         return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped", "cost": _cost}
     if _stage==AI_PROGRESS_INIT_IMAGE:
-        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.get('-o')}
+        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.get(gOutputSyntax)}
     if _stage==AI_PROGRESS_DONE_IMAGE:
         return {"stage": AI_PROGRESS_DONE_IMAGE, "descr":"copied input image to destination image"}
     return {"stage": AI_PROGRESS_ERROR, "descr":"error"}
