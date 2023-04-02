@@ -10,8 +10,10 @@ import sys
 import base64
 from datetime import datetime
 import argparse
+import asyncio
+import threading
 
-from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get_external_ip, get_container_ip, get_machine_name, get_os_name, getCudaInfo, downloadImage, start_watch_directory, stop_watch_directory
+from libOSAISTools import getHostInfo, listDirContent, is_running_in_docker, get_external_ip, get_container_ip, get_machine_name, get_os_name, getCudaInfo, downloadImage, start_observer_thread
 
 ## ------------------------------------------------------------------------
 #       all global vars
@@ -64,7 +66,11 @@ gDefaultCost=float(1)           ## default cost value in secs (will get override
 gaProcessTime=[]                ## Array of last x (10/20?) time spent for processed requests 
 
 ## processing specifics
-gOutputSyntax=None 
+gArgsOSAIS=None                 ## the args passed to the AI which are specific to OSAIS for sending notifications
+
+## when running as vAI
+gInputDir="./_output/"
+gOutputDir="./_output/"
 
 AI_PROGRESS_ERROR=-1
 AI_PROGRESS_IDLE=0
@@ -84,7 +90,6 @@ def _loadConfig(_name):
     global gDescription
     global gOrigin
     global gDefaultCost
-    global gOutputSyntax
 
     _json = None
     try:
@@ -100,11 +105,6 @@ def _loadConfig(_name):
     _cost=_json["default_cost"]
     if _cost!=None:
         gDefaultCost=float(_cost)
-
-    ## what s the AI expected tax for the output?
-    for param in _json["params"]:
-        if param["in"] == "output":
-            gOutputSyntax=param["out"]
 
     return _json
 
@@ -164,12 +164,28 @@ def _getAverageCost() :
     return average
 
 ## where is the output dir?
-def _getOutputDir(_args):
-    _output="./_output"
-    _tmpO=_args.get('-odir')
-    if _tmpO!=None:
-        _output=_tmpO
-    return _output
+def _getOutputDir():
+    global gArgsOSAIS
+    global gOutputDir
+
+    if gArgsOSAIS!=None:
+        return gArgsOSAIS.outdir
+    return gOutputDir
+
+## give new args 
+def _argsFromFilter(_originalArgs, _aFilter, _bKeep):
+    from werkzeug.datastructures import MultiDict
+    _dict = MultiDict([])
+    for i, arg in enumerate(_originalArgs):
+        if _bKeep:
+            if arg in _aFilter and i < len(_originalArgs) - 1:
+                _dict.add(arg, _originalArgs[i+1])
+        else:
+            if arg not in _aFilter and i < len(_originalArgs) - 1:
+                _dict.add(arg, _originalArgs[i+1])
+    
+    _args=_getArgs(_dict)
+    return _args
 
 ## notify the gateway of our AI config file
 def _notifyGateway() : 
@@ -528,7 +544,11 @@ def osais_authenticateAI():
 #       public fcts - Run the AI
 ## ------------------------------------------------------------------------
 
-def osais_initParser():
+def osais_initParser(aArg):
+    global gArgsOSAIS
+    global gInputDir
+    global gOutputDir
+
     # Create the parser
     vq_parser = argparse.ArgumentParser(description='Arg parser init by OSAIS')
 
@@ -537,88 +557,97 @@ def osais_initParser():
     vq_parser.add_argument("-t",  "--token", type=str, help="OpenSourceAIs token", default="0", dest='tokenAI')               ##  this is for comms with OpenSourceAIs
     vq_parser.add_argument("-u",  "--username", type=str, help="OpenSourceAIs username", default="", dest='username')       ##  this is for comms with OpenSourceAIs
     vq_parser.add_argument("-uid",  "--unique_id", type=int, help="Unique ID of this AI session", default=0, dest='uid')    ##  this is for comms with OpenSourceAIs
-    vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
-    vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
+    vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default=gOutputDir, dest='outdir')
+    vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default=gInputDir, dest='indir')
     vq_parser.add_argument("-local", "--islocal", type=bool, help="is local or prod?", default=False, dest='isLocal')
     vq_parser.add_argument("-cycle", "--cycle", type=int, help="cycle", default=0, dest='cycle')
-    return vq_parser
+    vq_parser.add_argument("-filename", "--filename", type=str, help="filename", default="default", dest='filename')
+
+    gArgsOSAIS = vq_parser.parse_args(aArg)
+    return True
 
 def osais_runAI(*args):
     global gIsBusy
+    global gAProcessed
+    global gName 
+    global gLastProcessStart_at
 
+    ## get args
     fn_run=args[0]
     _args=args[1]
 
+    ## do not process twice same uid
+    _uid=_args.get('-uid')
+    if _uid in gAProcessed:
+        return  "not processing, already tried..."
+
+    ## start time
     gIsBusy=True
     beg_date = datetime.utcnow()
 
-    _input=None
-    aFinalArg=_getArgs(_args)
+    ## reprocess AI args
+    aArgForparserAI=_getArgs(_args)
+    args_ExclusiveOSAIS = ['-orig', '-t', '-u', '-uid', '-local', '-cycle']
+    aArgForparserAI=_argsFromFilter(aArgForparserAI, args_ExclusiveOSAIS, False)
 
     ## process the filename passed in dir (case localhost / AI Gateway), or download file from URL (case AI running as Virtual AI)
+    _input=None
     _filename=_args.get('-filename')
     _urlUpload=_args.get('url_upload')
     if not _filename and _urlUpload:
         _input=downloadImage(_urlUpload)
         if _input:
-            aFinalArg.append("-filename")
-            aFinalArg.append(_input)
+            aArgForparserAI.append("-filename")
+            aArgForparserAI.append(_input)
         else:
             ## min requirements
             print("no image to process")
             return "input required"
 
-    print("\r\n=> before run: processed args from url: "+str(aFinalArg)+"\r\n")
-
-    ## do not process twice same uid
-    _uid=_args.get('-uid')
-    global gAProcessed
-    if _uid in gAProcessed:
-        return  "not processing, already tried..."
+    print("\r\n=> before run: processed args from url: "+str(aArgForparserAI)+"\r\n")
     
-    ## processing accepted
-    global gLastProcessStart_at
-    gLastProcessStart_at=datetime.utcnow()
+    ## Init OSAIS Params (from all args, keep only those for OSAIS)
+    aArgForParserOSAIS=_getArgs(_args)
+    args_OSAIS = ['-orig', '-t', '-u', '-uid', '-odir', '-idir', '-local', '-cycle']
+    aArgForParserOSAIS=_argsFromFilter(aArgForParserOSAIS, args_OSAIS, True)
+    osais_initParser(aArgForParserOSAIS)
 
-    global gName 
+    ## processing accepted
+    gLastProcessStart_at=datetime.utcnow()
     gAProcessed.append(_uid)
 
-    ## notify start
-    CredsParam=getCredsParams(_args)
-    MorphingParam=getMorphingParams(_args, None)
-    StageParam=getStageParams(_args, AI_PROGRESS_AI_STARTED, 0)
+    ## notify OSAIS (start)
+    CredsParam=getCredsParams()
+    MorphingParam=getMorphingParams()
+    StageParam=getStageParams(AI_PROGRESS_AI_STARTED, 0)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
     ## start watch file creation
-    _output=_getOutputDir(_args)
-    _thread, _observer=start_watch_directory(_output, osais_onNotifyFileCreated, _args)
+    _output=_getOutputDir()
+    watch_directory(_output, osais_onNotifyFileCreated, _args)
 
-    ## run the AI
-    _parser=osais_initParser()
-    response=None
-
-    StageParam=getStageParams(_args, AI_PROGRESS_INIT_IMAGE, 0)
+    ## Notif OSAIS
+    StageParam=getStageParams(AI_PROGRESS_INIT_IMAGE, 0)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
+    ## run AI
+    response=None
     if len(args)==2:
-        response=fn_run(_parser, aFinalArg)
+        response=fn_run(aArgForparserAI)
     else:
         if len(args)==3:
-            response=fn_run(_parser, aFinalArg, args[2])
+            response=fn_run(aArgForparserAI, args[2])
         else:
-            response=fn_run(_parser, aFinalArg, args[2], args[3])
+            response=fn_run(aArgForparserAI, args[2], args[3])
 
-    ## stop watch file creation
-    if _observer!=None:
-        stop_watch_directory(_thread, _observer) 
-
+    ## calculate cost
     gIsBusy=False
     end_date = datetime.utcnow()
     cost = (end_date - beg_date).total_seconds()
     _addCost(cost)
 
     ## notify end
-    StageParam=getStageParams(_args, AI_PROGRESS_AI_STOPPED, cost)
+    StageParam=getStageParams(AI_PROGRESS_AI_STOPPED, cost)
     osais_notify(CredsParam, MorphingParam , StageParam)
 
     ## default OK response if the AI does not send any
@@ -627,9 +656,10 @@ def osais_runAI(*args):
     return response
 
 def osais_onNotifyFileCreated(_dir, _filename, _args):
-    _stageParam=getStageParams(_args, AI_PROGRESS_DONE_IMAGE, 0)
-    _morphingParam=getMorphingParams(_args, _filename)
-    _credsParam=getCredsParams(_args)
+    gArgsOSAIS.filename=_filename
+    _stageParam=getStageParams(AI_PROGRESS_DONE_IMAGE, 0)
+    _morphingParam=getMorphingParams()
+    _credsParam=getCredsParams()
     osais_notify(_credsParam, _morphingParam, _stageParam)            # OSAIS Notification
     return True
 
@@ -700,7 +730,7 @@ def osais_notify(CredParam, MorphingParam, StageParam):
         if gIsVirtualAI==True:
             _dir=MorphingParam["odir"]
             if _dir==None:
-                _dir="./_output/"
+                _dir=gOutputDir
             _dirImage=_dir+_filename
 
             with open(_dirImage, "rb") as image_file:
@@ -716,27 +746,27 @@ def osais_notify(CredParam, MorphingParam, StageParam):
             _uploadImageToOSAIS(param, CredParam["isLocal"])
     return objRes
 
-def getCredsParams(_args) :
+def getCredsParams() :
     global gName
+    global gArgsOSAIS
     return {
         "engine": gName, 
-        "tokenAI": _args.get('-t'), 
-        "username": _args.get('-u'), 
-        "isLocal": _args.get('-local')=="True"
+        "tokenAI": gArgsOSAIS.tokenAI,
+        "username": gArgsOSAIS.username,
+        "isLocal": gArgsOSAIS.isLocal
     } 
 
-def getMorphingParams(_args, _filename) :
-    if _filename==None:
-        _filename="default"
-
+def getMorphingParams() :
+    global gArgsOSAIS
     return {
-        "uid": _args.get('-uid'), 
-        "cycle": _args.get('-cycle'), 
-        "filename": _filename, 
-        "odir": _getOutputDir(_args)
+        "uid": gArgsOSAIS.uid,
+        "cycle": gArgsOSAIS.cycle,
+        "filename": gArgsOSAIS.filename, 
+        "odir": _getOutputDir()
     }
 
-def getStageParams(_args, _stage, _cost) :
+def getStageParams(_stage, _cost) :
+    global gArgsOSAIS
     if _stage==AI_PROGRESS_ARGS:
         return {"stage": AI_PROGRESS_AI_STARTED, "descr":"Just parsed AI params"}
     if _stage==AI_PROGRESS_ERROR:
@@ -746,7 +776,7 @@ def getStageParams(_args, _stage, _cost) :
     if _stage==AI_PROGRESS_AI_STOPPED:
         return {"stage": AI_PROGRESS_AI_STOPPED, "descr":"AI stopped", "cost": _cost}
     if _stage==AI_PROGRESS_INIT_IMAGE:
-        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+_args.get(gOutputSyntax)}
+        return {"stage": AI_PROGRESS_INIT_IMAGE, "descr":"destination image = "+gArgsOSAIS.filename}
     if _stage==AI_PROGRESS_DONE_IMAGE:
         return {"stage": AI_PROGRESS_DONE_IMAGE, "descr":"copied input image to destination image"}
     return {"stage": AI_PROGRESS_ERROR, "descr":"error"}
@@ -756,6 +786,8 @@ def getStageParams(_args, _stage, _cost) :
 #       Init processing
 ## ------------------------------------------------------------------------
 
+## Multithreading for observers
+watch_directory=start_observer_thread(_getOutputDir(), osais_onNotifyFileCreated, None)
 print("\r\nPython OSAIS Lib is loaded...")
 
 

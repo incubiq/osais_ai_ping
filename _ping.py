@@ -41,7 +41,12 @@ print ("\r - machine uuid: "+str (hex(uuid.getnode())))
 default_image_width = 512
 default_image_height = 512
 
-def fn_run(vq_parser, _args): 
+def fn_run(_args): 
+    vq_parser = argparse.ArgumentParser()
+
+    # OSAIS arguments
+    vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
+    vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
 
     # Add the PING arguments
     vq_parser.add_argument("-p",    "--prompts", type=str, help="Text prompts", default=None, dest='prompts')

@@ -1,0 +1,54 @@
+{
+    "name": "osais",
+    "version": "1.0.0",
+    "description": "OSAIS params",
+    "params": [{
+        "in": "engine",
+        "out": null,
+        "isMandatory": false,
+        "type": "string",
+        "default": null
+    }, {
+        "in": "username",
+        "out": "-u",
+        "isMandatory": true,
+        "type": "string",
+        "default": "anon"
+    }, {
+        "in": "uid",
+        "out": "-uid",
+        "isMandatory": true,
+        "type": "int",
+        "default": null
+    }, {
+        "in": "token",
+        "out": "-t",
+        "isMandatory": true,
+        "type": "string",
+        "default": null
+    }, {
+        "in": "islocal",
+        "out": "-local",
+        "isMandatory": false,
+        "type": "boolean",
+        "default": "False"
+    }, {
+        "in": "cycle",
+        "out": "-cycle",
+        "isMandatory": false,
+        "type": "int",
+        "default": 0
+    }, {
+        "in": "idir",
+        "out": "-idir",
+        "isMandatory": false,
+        "type": "string",
+        "default": "./_input/"
+    }, {
+        "in": "odir",
+        "out": "-odir",
+        "isMandatory": false,
+        "type": "string",
+        "default": "./_output/"
+    }]
+}

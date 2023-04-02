@@ -12,24 +12,16 @@ import platform
 import sys
 import ctypes
 import asyncio
+import time
 import threading
 
 cuda=0                          ## from cuda import cuda, nvrtc
 gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest everywhere)
+gObserver=None
 
 ## ------------------------------------------------------------------------
 #       public fcts
 ## ------------------------------------------------------------------------
-
-
-def start_async_task(_fn, args):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.create_task(_fn(args))
-    try:
-        loop.run_forever()
-    finally:
-        loop.close()
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -45,32 +37,22 @@ class NewFileHandler(FileSystemEventHandler):
         if event.event_type == 'created':
             self.fnOnFileCreated(os.path.dirname(event.src_path), os.path.basename(event.src_path), self._args)
 
-## watch directory and call back if file was created
-def start_watch_directory(path, fnOnFileCreated, _args):
-    
-    event_handler = NewFileHandler(fnOnFileCreated, _args)
-    observer = Observer()
-    observer.schedule(event_handler, path, recursive=False)
-    observer.start()
-    try:
-        thread = threading.Thread(target=start_async_task, args=(async_observe, observer))
-        thread.start()
-        
-    except KeyboardInterrupt:
-        observer.stop()
+def start_observer_thread(path, fnOnFileCreated, _args):
 
-    observer=None
-    return thread, observer
+    ## watch directory and call back if file was created
+    def watch_directory(path, fnOnFileCreated, _args):    
+        global gObserver
+        if gObserver!=None:
+            gObserver.stop()
+        event_handler = NewFileHandler(fnOnFileCreated, _args)
+        gObserver = Observer()
+        gObserver.schedule(event_handler, path, recursive=False)
+        gObserver.start()
+        gObserver.join(1)
 
-async def async_observe(_observer):
-    _observer.join(1)
-
-async def stop_watch_directory(_thread, _observer):
-    ## stop this watch with a delay
-    await asyncio.sleep(3)
-    await _observer.stop()
-    threading.Timer(0, _thread.join).start()
-    return True
+    thread = threading.Thread(target=watch_directory, args=(path, fnOnFileCreated, _args))
+    thread.start()
+    return watch_directory
 
 ## list content of a directory
 def listDirContent(_dir):
