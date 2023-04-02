@@ -24,9 +24,20 @@
 import os
 import sys
 
-_envFile="env_local"
-if 'DOCKER_IMAGE' in os.environ:
+## docker of local?
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
+
+if is_docker():
     _envFile="env_docker"
+    print("\r\n=> in Docker\r\n")
+else:
+    print("\r\n=> NOT in Docker\r\n")
+    _envFile="env_local"
 
 ## ------------------------------------------------------------------------
 #       connect the AI with OSAIS

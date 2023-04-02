@@ -53,11 +53,11 @@ RUN pip3 install \
 
 # install flas and various files for running host
 RUN pip3 install \
-    flask==2.1.0 \
-    requests==2.25.1  \
-    flask-cors==3.0.10  \
-    schedule==1.1.0
-
+    flask==2.2.2 \
+    requests==2.28.1  \
+    schedule==1.1.0 \
+    watchdog==2.1.9 \
+    Werkzeug==2.2.2 
 
 # NVIDIA specials
 ENV NVIDIA_VISIBLE_DEVICES all

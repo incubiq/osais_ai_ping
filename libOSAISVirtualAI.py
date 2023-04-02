@@ -92,11 +92,15 @@ def _loadConfig(_name):
     global gDefaultCost
 
     _json = None
+    _dirFile=None
     try:
-        fJSON = open(f'{_name}.json')
+        from pathlib import Path
+        current_working_directory = Path.cwd()
+        _dirFile=f'{current_working_directory}/{_name}.json'
+        fJSON = open(_dirFile)
         _json = json.load(fJSON)
     except Exception as err:
-        print("CRITICAL: No json config file for "+_name)
+        print(f'CRITICAL: No config file {_dirFile}')
         sys.exit()
 
     gVersion=_json["version"]
@@ -351,24 +355,22 @@ def osais_getEnv(_filename):
     global gIsVirtualAI
     global gIsLocal
     global gName
-    gUsername = os.environ.get('USERNAME')                ## getting the username from the docker config (this AI belongs to the User)
-    gIsVirtualAI=os.environ.get('IS_VIRTUALAI')=="True"   ## is this used as a virtual AI, or a local server used by a gateway?
-    gIsLocal = os.environ.get('IS_LOCAL')=="True"         ## we are running locally by default, unless Docker config says otherwise 
-    if os.environ.get("TERM_PROGRAM")=="vscode":          ## local when in debug
-        with open(_filename, "r") as f:
-            content = f.read()
-        variables = content.split("\n")
-        for var in variables:
-            if var!="":
-                key, value = var.split("=")
-                if key == "USERNAME":
-                    gUsername = value
-                elif key == "IS_LOCAL":
-                    gIsLocal = (value=="True")
-                elif key == "IS_VIRTUALAI":
-                    gIsVirtualAI = (value=="True")
-                elif key == "ENGINE":
-                    gName = value
+
+    ## read env from config file
+    with open(_filename, "r") as f:
+        content = f.read()
+    variables = content.split("\n")
+    for var in variables:
+        if var!="":
+            key, value = var.split("=")
+            if key == "USERNAME":
+                gUsername = value
+            elif key == "IS_LOCAL":
+                gIsLocal = (value=="True")
+            elif key == "IS_VIRTUALAI":
+                gIsVirtualAI = (value=="True")
+            elif key == "ENGINE":
+                gName = value
     return {
         "username": gUsername,
         "isLocal": gIsLocal,
