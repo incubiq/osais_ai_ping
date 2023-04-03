@@ -5,14 +5,10 @@
 
 import uuid 
 import subprocess as sp
-from datetime import datetime
 import pkg_resources
 import os
 import platform
-import sys
 import ctypes
-import asyncio
-import time
 import threading
 
 cuda=0                          ## from cuda import cuda, nvrtc
@@ -20,7 +16,7 @@ gVersionLibOSAIS="1.0.12"       ## version of this library (to keep it latest ev
 gObserver=None
 
 ## ------------------------------------------------------------------------
-#       public fcts
+#       Observer (check updates in directory)
 ## ------------------------------------------------------------------------
 
 from watchdog.events import FileSystemEventHandler
@@ -54,6 +50,17 @@ def start_observer_thread(path, fnOnFileCreated, _args):
     thread.start()
     return watch_directory
 
+def start_notification_thread(fnOnNotify):
+    def _run(_fn):
+        _fn()
+    thread = threading.Thread(target=_run, args=(fnOnNotify))
+    thread.start()
+    return _run
+
+## ------------------------------------------------------------------------
+#       Directory utils
+## ------------------------------------------------------------------------
+
 ## list content of a directory
 def listDirContent(_dir):
     from os.path import isfile, join
@@ -65,9 +72,83 @@ def listDirContent(_dir):
         else:
             ret = ret+"./"+x+"<br>"
 
+    from datetime import datetime
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
     return dt_string+"<br>"+ret
+
+def clearOldFiles(_dir):  
+    from datetime import timedelta
+    from datetime import datetime
+    _now=datetime.now()
+    cutoff_time = _now - timedelta(minutes=10)
+    for filename in os.listdir(_dir):
+        file_path = os.path.join(_dir, filename)
+        modification_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+        if modification_time < cutoff_time:
+            os.remove(file_path)
+            
+## ------------------------------------------------------------------------
+#       System utils
+## ------------------------------------------------------------------------
+
+## get a meaningful name for our machine
+def get_machine_name() :
+    _machine=str (hex(uuid.getnode()))
+    _isDocker=is_running_in_docker()
+    if _isDocker:
+        _machine = os.environ.get('HOSTNAME') or os.popen('hostname').read().strip()
+    return _machine
+
+## which OS are we running on?
+def get_os_name():
+    os_name = platform.system()
+    return os_name
+
+## Are we running inside a docker session?
+def is_running_in_docker():
+    if os.path.exists('/proc/self/cgroup'):
+        with open('/proc/self/cgroup', 'rt') as f:
+            return 'docker' in f.read()
+    return False
+
+## get ip address of the host
+def get_container_ip():
+    import socket
+
+    # Get the hostname of the machine running the script
+    hostname = socket.gethostname()
+
+    # Get the IP address of the container by resolving the hostname
+    ip_address = socket.gethostbyname(hostname)
+    return ip_address
+
+## get our external ip address
+def get_external_ip():
+    import requests
+    url = "https://api.ipify.org"
+    response = requests.get(url)
+    return response.text.strip()
+
+## get our external port
+def get_port(): 
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    port = sock.getsockname()[1]
+    return port
+
+## just to get the list of all installed Python modules in the running session
+def get_list_of_modules():
+    installed_packages = pkg_resources.working_set
+    installed_packages_list=[]
+    for i in installed_packages:
+        installed_packages_list.append({i.key: i.version})
+    return installed_packages_list
+
+## ------------------------------------------------------------------------
+#       GPU utils
+## ------------------------------------------------------------------------
 
 ## which GPU is this? (will require access to nvidia-smi)
 def get_gpu_attr(_attr):
@@ -80,37 +161,6 @@ def get_gpu_attr(_attr):
    memory_use_values = [x.replace('\r', '') for i, x in enumerate(memory_use_info)]
    return memory_use_values
 
-## just to get the list of all installed Python modules in the running session
-def get_list_of_modules():
-    installed_packages = pkg_resources.working_set
-    installed_packages_list=[]
-    for i in installed_packages:
-        installed_packages_list.append({i.key: i.version})
-    return installed_packages_list
-
-## get various info about this host
-def getHostInfo(_engine):
-    now = datetime.now()
-    objGPU={}
-    objGPU["memory_free"]=get_gpu_attr("memory.free")[0]
-    objGPU["memory_used"]=get_gpu_attr("memory.used")[0]
-    objGPU["name"]=get_gpu_attr("gpu_name")[0]
-    objGPU["driver_version"]=get_gpu_attr("driver_version")[0]
-    objGPU["temperature"]=get_gpu_attr("temperature.gpu")[0]
-    objGPU["utilization"]=get_gpu_attr("utilization.gpu")[0]
-
-    objCuda=getCudaInfo()        
-    return {
-        "datetime": now.strftime("%d/%m/%Y %H:%M:%S"), 
-        "isDocker": is_running_in_docker(),
-        "internal IP": get_container_ip(),
-        "port": get_port(),
-        "engine": _engine,
-        "machine": get_machine_name(),
-        "GPU": objGPU,
-        "Cuda": objCuda,
-        "modules": get_list_of_modules()
-    }
 
 ## get GPU Cuda info
 # see here: https://gist.github.com/tispratik/42a71cae34389fd7c8e89496ae8813ae
@@ -208,6 +258,39 @@ def _ConvertSMVer2Cores(major, minor):
       (7, 5):  64,      # SM 7.5: TU10x class
     }.get((major, minor), 64)   # unknown architecture, return a default value
 
+## ------------------------------------------------------------------------
+#       getInfo endoint
+## ------------------------------------------------------------------------
+
+## get various info about this host
+def getHostInfo(_engine):
+    from datetime import datetime
+    now = datetime.now()
+    objGPU={}
+    objGPU["memory_free"]=get_gpu_attr("memory.free")[0]
+    objGPU["memory_used"]=get_gpu_attr("memory.used")[0]
+    objGPU["name"]=get_gpu_attr("gpu_name")[0]
+    objGPU["driver_version"]=get_gpu_attr("driver_version")[0]
+    objGPU["temperature"]=get_gpu_attr("temperature.gpu")[0]
+    objGPU["utilization"]=get_gpu_attr("utilization.gpu")[0]
+
+    objCuda=getCudaInfo()        
+    return {
+        "datetime": now.strftime("%d/%m/%Y %H:%M:%S"), 
+        "isDocker": is_running_in_docker(),
+        "internal IP": get_container_ip(),
+        "port": get_port(),
+        "engine": _engine,
+        "machine": get_machine_name(),
+        "GPU": objGPU,
+        "Cuda": objCuda,
+        "modules": get_list_of_modules()
+    }
+
+## ------------------------------------------------------------------------
+#       File / Image utils
+## ------------------------------------------------------------------------
+
 ## downloads an image as file from external URL
 def downloadImage(url) :
     import urllib.request
@@ -224,48 +307,3 @@ def downloadImage(url) :
     urllib.request.urlretrieve(url, local_file_path)
     return f"{local_filename}{file_extension}"
 
-## get a meaningful name for our machine
-def get_machine_name() :
-    _machine=str (hex(uuid.getnode()))
-    _isDocker=is_running_in_docker()
-    if _isDocker:
-        _machine = os.environ.get('HOSTNAME') or os.popen('hostname').read().strip()
-    return _machine
-
-## which OS are we running on?
-def get_os_name():
-    os_name = platform.system()
-    return os_name
-
-## Are we running inside a docker session?
-def is_running_in_docker():
-    if os.path.exists('/proc/self/cgroup'):
-        with open('/proc/self/cgroup', 'rt') as f:
-            return 'docker' in f.read()
-    return False
-
-## get ip address of the host
-def get_container_ip():
-    import socket
-
-    # Get the hostname of the machine running the script
-    hostname = socket.gethostname()
-
-    # Get the IP address of the container by resolving the hostname
-    ip_address = socket.gethostbyname(hostname)
-    return ip_address
-
-## get our external ip address
-def get_external_ip():
-    import requests
-    url = "https://api.ipify.org"
-    response = requests.get(url)
-    return response.text.strip()
-
-## get our external port
-def get_port(): 
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('localhost', 0))
-    port = sock.getsockname()[1]
-    return port
