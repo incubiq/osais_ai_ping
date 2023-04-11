@@ -2,21 +2,36 @@
     "name": "ping",
     "location": "http://0.0.0.0",
     "port": 5001,
-    "version": "1.0.6",
+    "version": "1.0.9",
     "description": "Ping AI for test purposes only",
     "origin": "https://github.com/incubiq/osais_ai_ping",
     "default_cost": 1,
     "params": [{
+        "in": "url_upload",
+        "out": "url_upload",
+        "isMandatory": true,
+        "type": "string",
+        "default": null,
+        "accept": {"$max": 2048},
+        "ui": {
+            "title": "Image input",
+            "widget": "uiSelectPicture"
+        }
+    }, {
         "in": "width",
         "out": "-width",
         "isMandatory": true,
         "type": "int",
         "default": 512,
-        "accept": {"$in":[320, 384, 448, 512, 576, 640, 704, 768]},
+        "accept": {
+            "$in":[320, 384, 448, 512, 576, 640, 704, 768], 
+            "display":["320x320", "384x384", "448x448", "512x512", "576x576", "640x640", "704x704", "768x768"]
+        },
         "freeAccess": {"$max": 512},
         "ui": {
             "title": "Output resolution",
-            "widget": "uiMultiToggle"
+            "widget": "uiMultiToggle",
+            "autofill": ["height"]
         }
     }, {
         "in": "height",
@@ -26,16 +41,6 @@
         "default": 512,
         "accept": {"$in":[320, 384, 448, 512, 576, 640, 704, 768]},
         "freeAccess": {"$max": 512}
-    }, {
-        "in": "url_upload",
-        "out": "url_upload",
-        "isMandatory": true,
-        "type": "string",
-        "default": null,
-        "ui": {
-            "title": "Image input",
-            "widget": "uiSelectPicture"
-        }
     }, {
         "in": "output",
         "out": "-o",
