@@ -57,7 +57,8 @@ RUN pip3 install \
     requests==2.28.1  \
     schedule==1.1.0 \
     watchdog==2.1.9 \
-    Werkzeug==2.2.2 
+    Werkzeug==2.2.2 \
+    osais>=1.0.0 
 
 # NVIDIA specials
 ENV NVIDIA_VISIBLE_DEVICES all

@@ -21,7 +21,7 @@
 ## ------------------------------------------------------------------------
 
 import sys
-from libOSAISVirtualAI import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI
+from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI
 
 ## register and login this AI
 APP_ENGINE=osais_initializeAI()

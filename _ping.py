@@ -16,10 +16,6 @@ fileDir = os.path.dirname(os.path.abspath(__file__))
 root=os.path.join(fileDir, '..') 
 sys.path.append(root) 
 
-# need to include OSAIS python lib
-from libOSAISVirtualAI import osais_notify, osais_getInfo, getCredsParams, getMorphingParams, getStageParams
-from libOSAISVirtualAI import AI_PROGRESS_ERROR, AI_PROGRESS_AI_STARTED, AI_PROGRESS_INIT_IMAGE, AI_PROGRESS_DONE_IMAGE, AI_PROGRESS_AI_STOPPED
-
 import argparse
 
 print("\r - Current version of Python is ", sys.version)
