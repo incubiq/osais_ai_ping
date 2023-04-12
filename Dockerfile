@@ -74,6 +74,9 @@ WORKDIR /src/app
 
 COPY . .
 
+# ensure we upgrade osais lib
+RUN  pip3 install -r requirements.txt --upgrade
+
 # prepare for mounting images
 RUN rm -r ./_input
 RUN rm -r ./_output

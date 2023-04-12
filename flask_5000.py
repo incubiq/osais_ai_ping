@@ -21,7 +21,7 @@
 ## ------------------------------------------------------------------------
 
 import sys
-from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI
+from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
 
 ## register and login this AI
 APP_ENGINE=osais_initializeAI()
@@ -102,19 +102,25 @@ def run():
 def gpu():
     return jsonify(osais_getHarwareInfo())
 
-@app.route('/root')
-def root():
-    return osais_getDirectoryListing("./")
-
-@app.route('/input')
-def input():
-    return osais_getDirectoryListing("./_input")
-
-@app.route('/output')
-def output():
-    return osais_getDirectoryListing("./_output")
-
 @app.route('/test')
 def test():
     bRet=_test()
     return jsonify({"data": bRet})
+
+## ------------------------------------------------------------------------
+#       test routes when in local mode
+## ------------------------------------------------------------------------
+
+if osais_isLocal():
+    @app.route('/root')
+    def root():
+        return osais_getDirectoryListing("./")
+
+    @app.route('/input')
+    def input():
+        return osais_getDirectoryListing("./_input")
+
+    @app.route('/output')
+    def output():
+        return osais_getDirectoryListing("./_output")
+
