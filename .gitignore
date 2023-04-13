@@ -6,3 +6,5 @@ _input/*
 _output/*
 
 .vscode/
+
+osais_debug.py
