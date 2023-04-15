@@ -2,7 +2,7 @@
     "name": "ping",
     "location": "http://0.0.0.0",
     "port": 5001,
-    "version": "1.1.0",
+    "version": "1.1.5",
     "description": "Ping AI for test purposes only",
     "origin": "https://github.com/incubiq/osais_ai_ping",
     "default_cost": 1000,
@@ -31,6 +31,8 @@
         "ui": {
             "title": "Output resolution",
             "widget": "uiMultiToggle",
+            "unit": "px",            
+            "column": 2,
             "autofill": ["height"]
         }
     }, {
@@ -40,7 +42,10 @@
         "type": "int",
         "default": 512,
         "accept": {"$in":[320, 384, 448, 512, 576, 640, 704, 768]},
-        "freeAccess": {"$max": 512}
+        "freeAccess": {"$max": 512},
+        "ui": {
+            "unit": "px"
+        }
     }, {
         "in": "output",
         "out": "-o",
