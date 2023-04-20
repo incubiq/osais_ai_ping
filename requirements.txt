@@ -1,8 +1,8 @@
 
-flask==2.1.0
+fastapi==0.74
 requests==2.25.1
-flask-cors==3.0.10
 schedule==1.1.0
 watchdog==2.1.9
 Werkzeug==2.2.2
 osais>=1.0.0 
+uvicorn[standard]==0.17

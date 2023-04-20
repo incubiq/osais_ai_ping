@@ -21,12 +21,22 @@
 ## ------------------------------------------------------------------------
 
 import sys
-#from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
-from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
+import os
+
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
 
 ## register and login this AI
-APP_ENGINE=osais_initializeAI()
+try:
+    APP_ENGINE=osais_initializeAI()
+    sys.stdout.flush()
+
+except Exception as err:
+    print('CRITICAL: Init OSAIS failed with exception')
+    sys.exit(0)
+
 if APP_ENGINE==None:
+    print('CRITICAL: Init OSAIS failed')
     sys.exit(0)
 
 ## ------------------------------------------------------------------------
@@ -68,60 +78,81 @@ _test()
 #       init app (flask)
 ## ------------------------------------------------------------------------
 
-from flask import Flask, request, jsonify
-app = Flask(APP_ENGINE)
+from fastapi import FastAPI, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
 ## ------------------------------------------------------------------------
 
-@app.route('/')
+@app.get('/')
 def home():
-    return jsonify({"data":osais_getInfo()})
+    encoded_data = jsonable_encoder({"data":osais_getInfo()})
+    return JSONResponse(content=encoded_data)
 
-@app.route('/auth')
+@app.get('/auth')
 def auth():
-    return jsonify({"data": osais_authenticateAI()})
+    encoded_data = jsonable_encoder({"data":osais_authenticateAI()})
+    return JSONResponse(content=encoded_data)
 
-@app.route('/status')
+@app.get('/status')
 def status():
-    return jsonify({"data": osais_getInfo()})
+    encoded_data = jsonable_encoder({"data":osais_getInfo()})
+    return JSONResponse(content=encoded_data)
 
-@app.route('/run')
-def run():
+@app.get('/docker')
+def inDocker():
+    encoded_data = jsonable_encoder({"data": {
+            "is_local": os.environ.get('IS_LOCAL'),
+            "is_virtualai": os.environ.get('IS_VIRTUALAI'),
+            "engine": os.environ.get('ENGINE'),
+            "username": os.environ.get("USERNAME")
+        }
+    })
+    return JSONResponse(content=encoded_data)   
+
+@app.get('/run')
+def run(q: str = Query(None)):
     try:
-        osais_runAI(fn_run, request.args)
-        return jsonify({"data": True})
+        osais_runAI(fn_run, q)
+        encoded_data = jsonable_encoder({"data": True})
+        return JSONResponse(content=encoded_data)
     except:
-        return jsonify({"data": False})
+        encoded_data = jsonable_encoder({"data": False})
+        return JSONResponse(content=encoded_data)
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (optional)
 ## ------------------------------------------------------------------------
 
-@app.route('/gpu')
+@app.get('/gpu')
 def gpu():
-    return jsonify(osais_getHarwareInfo())
+    encoded_data = jsonable_encoder({"data":osais_getHarwareInfo()})
+    return JSONResponse(content=encoded_data)
 
-@app.route('/test')
+@app.get('/test')
 def test():
     bRet=_test()
-    return jsonify({"data": bRet})
+    encoded_data = jsonable_encoder({"data": bRet})
+    return JSONResponse(content=encoded_data)
 
 ## ------------------------------------------------------------------------
 #       test routes when in local mode
 ## ------------------------------------------------------------------------
 
 if osais_isLocal():
-    @app.route('/root')
+    @app.get('/root')
     def root():
         return osais_getDirectoryListing("./")
 
-    @app.route('/input')
+    @app.get('/input')
     def input():
         return osais_getDirectoryListing("./_input")
 
-    @app.route('/output')
+    @app.get('/output')
     def output():
         return osais_getDirectoryListing("./_output")
-
+    

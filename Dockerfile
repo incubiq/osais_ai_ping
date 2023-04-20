@@ -88,6 +88,11 @@ RUN chown -R root:root ./_output
 # this is our entry point for the app
 ENV FLASK_APP=flask_5000.py
 
+ENV USERNAME=3fbe53cba18a5c73c3b69421e4f44812460c2e55b7634a77006e54e3f5605a3b
+ENV IS_LOCAL=False
+ENV IS_VIRTUALAI=True
+ENV ENGINE=ping
+
 # probably not needed...
 EXPOSE 8080
 EXPOSE 8000
