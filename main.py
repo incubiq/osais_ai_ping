@@ -11,8 +11,7 @@
 ## when debug locally:
 ##
 ##   Put yourself in the src directory
-##   Set env var once:  $env:FLASK_APP="flask_5000"
-##   Run with: python -m flask run --host=0.0.0.0 --port=5001
+##   Run with: uvicorn main:app --host 0.0.0.0 --port 5001
 ##   Test it : http://localhost:5001/
 ##
 
@@ -75,13 +74,10 @@ def _test():
 _test()
 
 ## ------------------------------------------------------------------------
-#       init app (flask)
+#       init app (fastapi)
 ## ------------------------------------------------------------------------
 
-from fastapi import FastAPI, Query
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
-
+from fastapi import FastAPI, Request
 app = FastAPI()
 
 ## ------------------------------------------------------------------------
@@ -90,39 +86,33 @@ app = FastAPI()
 
 @app.get('/')
 def home():
-    encoded_data = jsonable_encoder({"data":osais_getInfo()})
-    return JSONResponse(content=encoded_data)
+    return {"data":osais_getInfo()}
 
 @app.get('/auth')
 def auth():
-    encoded_data = jsonable_encoder({"data":osais_authenticateAI()})
-    return JSONResponse(content=encoded_data)
+    return {"data":osais_authenticateAI()}
 
 @app.get('/status')
 def status():
-    encoded_data = jsonable_encoder({"data":osais_getInfo()})
-    return JSONResponse(content=encoded_data)
+    return {"data":osais_getInfo()}
 
 @app.get('/docker')
 def inDocker():
-    encoded_data = jsonable_encoder({"data": {
+    return {"data": {
             "is_local": os.environ.get('IS_LOCAL'),
             "is_virtualai": os.environ.get('IS_VIRTUALAI'),
             "engine": os.environ.get('ENGINE'),
             "username": os.environ.get("USERNAME")
         }
-    })
-    return JSONResponse(content=encoded_data)   
+    }
 
-@app.get('/run')
-def run(q: str = Query(None)):
+@app.get('/run/')
+def run(request: Request):
     try:
-        osais_runAI(fn_run, q)
-        encoded_data = jsonable_encoder({"data": True})
-        return JSONResponse(content=encoded_data)
+        osais_runAI(fn_run, request.query_params._dict)
+        return {"data": True}
     except:
-        encoded_data = jsonable_encoder({"data": False})
-        return JSONResponse(content=encoded_data)
+        return {"data": False}
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (optional)
@@ -130,14 +120,12 @@ def run(q: str = Query(None)):
 
 @app.get('/gpu')
 def gpu():
-    encoded_data = jsonable_encoder({"data":osais_getHarwareInfo()})
-    return JSONResponse(content=encoded_data)
+    return {"data":osais_getHarwareInfo()}
 
 @app.get('/test')
 def test():
     bRet=_test()
-    encoded_data = jsonable_encoder({"data": bRet})
-    return JSONResponse(content=encoded_data)
+    return {"data": bRet}
 
 ## ------------------------------------------------------------------------
 #       test routes when in local mode

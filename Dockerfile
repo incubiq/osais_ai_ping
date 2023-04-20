@@ -53,12 +53,13 @@ RUN pip3 install \
 
 # install flas and various files for running host
 RUN pip3 install \
-    flask==2.2.2 \
+    fastapi==0.74 \
     requests==2.28.1  \
     schedule==1.1.0 \
     watchdog==2.1.9 \
     Werkzeug==2.2.2 \
-    osais>=1.0.0 
+    osais>=1.0.0 \
+    uvicorn[standard]==0.17
 
 # NVIDIA specials
 ENV NVIDIA_VISIBLE_DEVICES all
@@ -85,17 +86,11 @@ RUN mkdir -p ./_output
 RUN chown -R root:root ./_input
 RUN chown -R root:root ./_output
 
-# this is our entry point for the app
-ENV FLASK_APP=flask_5000.py
-
+# overload config with those default settings
 ENV USERNAME=3fbe53cba18a5c73c3b69421e4f44812460c2e55b7634a77006e54e3f5605a3b
 ENV IS_LOCAL=False
 ENV IS_VIRTUALAI=True
 ENV ENGINE=ping
 
-# probably not needed...
-EXPOSE 8080
-EXPOSE 8000
-
 # because it s flask, it will run on port 5000... but we will redirect to another port when we docker run it
-CMD ["python3", "-m", "flask", "run", "--host=0.0.0.0"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001"]
