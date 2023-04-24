@@ -74,73 +74,58 @@ def _test():
 _test()
 
 ## ------------------------------------------------------------------------
-#       init app (fastapi)
+#       init app (flask)
 ## ------------------------------------------------------------------------
 
-from fastapi import FastAPI, Request
-app = FastAPI()
+from flask import Flask, request, jsonify
+app = Flask(APP_ENGINE)
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
 ## ------------------------------------------------------------------------
 
-@app.get('/')
+@app.route('/')
 def home():
-    return {"data":osais_getInfo()}
+    return jsonify({"data":osais_getInfo()})
 
-@app.get('/auth')
+@app.route('/auth')
 def auth():
-    return {"data":osais_authenticateAI()}
+    return jsonify({"data": osais_authenticateAI()})
 
-@app.get('/status')
+@app.route('/status')
 def status():
-    return {"data":osais_getInfo()}
+    return jsonify({"data": osais_getInfo()})
 
-@app.get('/docker')
-def inDocker():
-    return {"data": {
-            "is_local": os.environ.get('IS_LOCAL'),
-            "is_virtualai": os.environ.get('IS_VIRTUALAI'),
-            "engine": os.environ.get('ENGINE'),
-            "username": os.environ.get("USERNAME")
-        }
-    }
-
-@app.get('/run/')
-def run(request: Request):
+@app.route('/run')
+def run():
     try:
-        osais_runAI(fn_run, request.query_params._dict)
-        return {"data": True}
+        osais_runAI(fn_run, request.args)
+        return jsonify({"data": True})
     except:
-        return {"data": False}
-
+        return jsonify({"data": False})
+    
 ## ------------------------------------------------------------------------
 #       routes for this AI (optional)
 ## ------------------------------------------------------------------------
-
-@app.get('/gpu')
+@app.route('/gpu')
 def gpu():
-    return {"data":osais_getHarwareInfo()}
+    return jsonify(osais_getHarwareInfo())
 
-@app.get('/test')
+@app.route('/test')
 def test():
     bRet=_test()
-    return {"data": bRet}
+    return jsonify({"data": bRet})
 
 ## ------------------------------------------------------------------------
 #       test routes when in local mode
 ## ------------------------------------------------------------------------
-
 if osais_isLocal():
-    @app.get('/root')
+    @app.route('/root')
     def root():
         return osais_getDirectoryListing("./")
-
-    @app.get('/input')
+    @app.route('/input')
     def input():
         return osais_getDirectoryListing("./_input")
-
-    @app.get('/output')
+    @app.route('/output')
     def output():
         return osais_getDirectoryListing("./_output")
-    
