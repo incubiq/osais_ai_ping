@@ -1,0 +1,25 @@
+
+<div class="block">
+    <div class="subtitle" >{{ object.ui.title }}</div>
+
+    <div class="subBlock">
+
+        {% for btn_value in object.accept["$in"] -%}
+        <button 
+            {% if object.default == btn_value -%}
+                class="multiToggle active"    
+            {% else %}
+
+                {% if object.freeAccess["$max"] > btn_value -%}
+                    class="multiToggle"    
+                {% else %}
+                    class="multiToggle disabled"    
+                {% endif %}
+            {% endif %}
+        >     
+            {{object.accept.display[loop.index-1]}}   
+        </button>
+        {% endfor %}
+
+    </div>
+</div>

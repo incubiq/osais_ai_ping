@@ -1,0 +1,55 @@
+<html>
+    <head>
+        <link href="/static/styles.css" rel="stylesheet">        
+    </head>
+<body>
+
+    <div class="page" >
+        <h2 class=""title>{{name | safe}}</h2>
+        <div class="section">
+
+            <div class="col">
+                <div class="col_left">
+
+                        {% for obj in params -%}
+                            {% if obj.ui -%}
+
+                                    <!-- Button widget -->
+                                    {% if obj.ui.widget == "uiMultiToggle" -%}
+                                        {% with object=obj %}
+                                            {% include "tpl_multiToggle.html" %}
+                                        {% endwith %}
+                                    {% endif %}
+
+                                    <!-- Sel Picture widget -->
+                                    {% if obj.ui.widget == "uiSelectPicture" -%}
+                                        {% with object=obj %}
+                                            {% include "tpl_selectPicture.html" %}
+                                        {% endwith %}
+                                    {% endif %}
+
+                            {% endif %}
+                        {% endfor %}
+
+                </div>
+            </div>
+
+            <div class="col">
+                <div class="col_right">
+                    <form name="myForm" action="/run" onsubmit="return validateForm()" method="get"></formname>                
+                        <input type="submit" value="Generate!" class="submit">
+                        <p class="submit_footnote">This will generate an image based on your input parameters. Use our APIs for production needs.</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="float:left">
+        {% for item in files %}
+            <img src="{{orig}}uploads/ai/{{ item }}" style="max-width: 320px; max-height: 320px; margin: 8px;"/>
+        {% endfor %}
+    </div>
+
+</body>
+</html>

@@ -78,7 +78,16 @@ _test()
 ## ------------------------------------------------------------------------
 
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from jinja2 import Environment, FileSystemLoader
+
 app = FastAPI()
+app.mount(
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
+)
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
@@ -86,7 +95,12 @@ app = FastAPI()
 
 @app.get('/')
 def home():
-    return {"data":osais_getInfo()}
+    config=osais_getInfo()
+    json=config["json"]
+
+    env = Environment(loader=FileSystemLoader('./templates/'))
+    template = env.get_template('tpl_form.html')
+    return HTMLResponse(content=template.render(json), status_code=200)
 
 @app.get('/auth')
 def auth():

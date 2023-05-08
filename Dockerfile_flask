@@ -59,6 +59,7 @@ RUN pip3 install \
     schedule==1.1.0 \
     watchdog==2.1.9 \
     Werkzeug==2.2.2 \
+    Jinja2==3.1.2 \
     osais>=1.0.0 
 
 # NVIDIA specials

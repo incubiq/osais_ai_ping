@@ -22,8 +22,8 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
+#from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
+from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
 
 ## register and login this AI
 try:
@@ -77,8 +77,12 @@ _test()
 #       init app (flask)
 ## ------------------------------------------------------------------------
 
-from flask import Flask, request, jsonify
-app = Flask(APP_ENGINE)
+from flask import Flask, request, jsonify, render_template_string
+from jinja2 import Environment, FileSystemLoader
+
+app = Flask(APP_ENGINE, 
+    template_folder='./templates',
+    static_folder='static')
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
@@ -86,7 +90,12 @@ app = Flask(APP_ENGINE)
 
 @app.route('/')
 def home():
-    return jsonify({"data":osais_getInfo()})
+    config=osais_getInfo()
+    json=config["json"]
+
+    env = Environment(loader=FileSystemLoader('./templates/'))
+    template = env.get_template('tpl_form.html')
+    return render_template_string(template.render(json))
 
 @app.route('/auth')
 def auth():
