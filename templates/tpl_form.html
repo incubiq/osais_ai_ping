@@ -1,43 +1,101 @@
 <html>
     <head>
         <link href="/static/styles.css" rel="stylesheet">        
+        <script src="/static/main.js"></script>
+
+        <script>
+            function validateForm( ) {
+                let bIsValid=true;
+                
+                // review all input and reformat if necessary
+                {% for obj in config_base.params -%}
+                    {% if obj.out != null -%}                        
+                        if(!osais_ai_validateObject({{obj}})) {bIsValid=false};
+                    {% endif %}
+                {% endfor %}
+                {% for obj in config_ai.params -%}
+                    {% if obj.out != null -%}
+                        if(!osais_ai_validateObject({{obj}})) {bIsValid=false};
+                    {% endif %}
+                {% endfor %}
+
+                const mySubmit = document.getElementById("submit");
+                if(bIsValid) {
+                    mySubmit.classList.remove('disabled');
+                }
+                else {
+                    mySubmit.classList.add('disabled');
+                    return false;
+                }
+
+                const myForm = document.getElementById("formRun");
+                const url = "/run"; 
+                myForm.action = url;
+                return true;
+            }
+
+
+        </script>
     </head>
-<body>
+<body onload="validateForm()">
 
     <div class="page" >
         <h2 class=""title>{{name | safe}}</h2>
+        <div class="block_user">
+            <p>You are logged as: 
+                <span class="user" id="user">{{client.user.firstName}}</span>
+                {% if client.user.username == "demo" -%}
+                <br />
+                <span class="">Already have an account? <a href="">Sign-in...</a></span>
+                {% endif %}
+            </p>
+        </div>
+
         <div class="section">
 
             <div class="col">
                 <div class="col_left">
-
-                        {% for obj in params -%}
-                            {% if obj.ui -%}
-
-                                    <!-- Button widget -->
-                                    {% if obj.ui.widget == "uiMultiToggle" -%}
-                                        {% with object=obj %}
-                                            {% include "tpl_multiToggle.html" %}
-                                        {% endwith %}
-                                    {% endif %}
-
-                                    <!-- Sel Picture widget -->
-                                    {% if obj.ui.widget == "uiSelectPicture" -%}
-                                        {% with object=obj %}
-                                            {% include "tpl_selectPicture.html" %}
-                                        {% endwith %}
-                                    {% endif %}
-
-                            {% endif %}
-                        {% endfor %}
-
+                    {% with panel=1 %}
+                        {% include "tpl_panel.html" %}
+                    {% endwith %}
                 </div>
             </div>
 
             <div class="col">
                 <div class="col_right">
-                    <form name="myForm" action="/run" onsubmit="return validateForm()" method="get"></formname>                
-                        <input type="submit" value="Generate!" class="submit">
+                    {% with panel=2 %}
+                        {% include "tpl_panel.html" %}
+                    {% endwith %}
+
+                    <form id="formRun" name="formRun" action="" 
+                        onsubmit="return validateForm()" 
+                        method="get"
+                    >
+                        <button id="submit" type="submit" class="submit" >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            &nbsp;
+                            <span>Generate!</span>
+                        </button>
+                        {% for obj in config_ai.params -%}
+                            {% if obj.out != null -%}
+                                <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{obj.default}}" />
+                            {% endif %}
+                        {% endfor %}
+
+                        {% for obj in config_base.params -%}
+                            {% if obj.out != null -%}
+                            {% if obj.in == "username" -%}
+                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{client.user.username}}" />
+                            {% else %}
+                            {% if obj.in == "token" -%}
+                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{client.token}}" />
+                            {% else %}
+                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{obj.default}}"/>
+                            {% endif %}
+                            {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
                         <p class="submit_footnote">This will generate an image based on your input parameters. Use our APIs for production needs.</p>
                     </form>
                 </div>

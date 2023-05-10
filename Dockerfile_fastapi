@@ -59,6 +59,7 @@ RUN pip3 install \
     watchdog==2.1.9 \
     Werkzeug==2.2.2 \
     Jinja2==3.1.2 \
+    boto3==1.26.130 \
     osais>=1.0.0 \
     uvicorn[standard]==0.17
 

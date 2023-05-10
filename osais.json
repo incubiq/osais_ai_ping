@@ -2,6 +2,8 @@
     "name": "osais",
     "version": "1.0.0",
     "description": "OSAIS params",
+    "default_cost": 0,
+    "origin": "",
     "params": [{
         "in": "engine",
         "out": null,

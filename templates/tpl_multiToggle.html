@@ -6,6 +6,14 @@
 
         {% for btn_value in object.accept["$in"] -%}
         <button 
+            onclick="
+            osais_ai_onMultiToggleReset('{{object.in}}', {{object.accept["$in"]}} );
+            osais_ai_onMultiToggleUpdate('{{object.in}}_{{btn_value}}', '{{object.out}}', '{{btn_value}}');
+            
+            "
+            
+            id="{{object.in}}_{{btn_value}}"
+
             {% if object.default == btn_value -%}
                 class="multiToggle active"    
             {% else %}

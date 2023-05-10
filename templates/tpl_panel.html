@@ -1,0 +1,22 @@
+
+    {% for obj in config_ai.params -%}
+        {% if obj.ui -%}
+            {% if obj.ui.column == panel -%}
+
+                <!-- Button widget -->
+                {% if obj.ui.widget == "uiMultiToggle" -%}
+                    {% with object=obj %}
+                        {% include "tpl_multiToggle.html" %}
+                    {% endwith %}
+                {% endif %}
+
+                <!-- Sel Picture widget -->
+                {% if obj.ui.widget == "uiSelectPicture" -%}
+                    {% with object=obj %}
+                        {% include "tpl_selectPicture.html" %}
+                    {% endwith %}
+                {% endif %}
+            {% endif %}
+
+        {% endif %}
+    {% endfor %}

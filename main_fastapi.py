@@ -22,8 +22,8 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient
 
 ## register and login this AI
 try:
@@ -89,18 +89,38 @@ app.mount(
     name="static",
 )
 
+## log user (as demo) if not already
+global dataAuth
+dataAuth=osais_authenticateClient(None, None)
+
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
 ## ------------------------------------------------------------------------
 
+def _convert_python_to_js(data):
+    if isinstance(data, dict):
+        return {_convert_python_to_js(key): _convert_python_to_js(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [_convert_python_to_js(item) for item in data]
+    elif data is None:
+        return "null"
+    elif data is True:
+        return "true"
+    elif data is False:
+        return "false"
+    else:
+        return data
+
 @app.get('/')
 def home():
+    global dataAuth
     config=osais_getInfo()
-    json=config["json"]
+    config["client"]=dataAuth["data"]
 
     env = Environment(loader=FileSystemLoader('./templates/'))
     template = env.get_template('tpl_form.html')
-    return HTMLResponse(content=template.render(json), status_code=200)
+    _config=_convert_python_to_js(config)
+    return HTMLResponse(content=template.render(_config), status_code=200)
 
 @app.get('/auth')
 def auth():

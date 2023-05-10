@@ -1,0 +1,12 @@
+{
+  "DefaultUserSettings": {
+    "KernelGatewayAppSettings": {
+      "CustomImages": [
+        {
+          "ImageName": "ai_ping",
+          "AppImageConfigName": "ai_ping_config"
+        }
+      ]
+    }
+  }
+}

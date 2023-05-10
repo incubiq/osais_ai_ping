@@ -8,3 +8,5 @@ _output/*
 .vscode/
 
 osais_debug.py
+env_local
+env_docker
