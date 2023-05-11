@@ -4,110 +4,91 @@
         <script src="/static/main.js"></script>
 
         <script>
-            function validateForm( ) {
+            osais_ai_setAuthToken("{{client.authToken}}");
+            osais_ai_setOSAISRoute("{{osais}}api/v1/private/client/ai/{{name}}");
+
+            function osais_ai_validateAllObjects() {
+            
                 let bIsValid=true;
-                
                 // review all input and reformat if necessary
-                {% for obj in config_base.params -%}
-                    {% if obj.out != null -%}                        
-                        if(!osais_ai_validateObject({{obj}})) {bIsValid=false};
-                    {% endif %}
-                {% endfor %}
                 {% for obj in config_ai.params -%}
-                    {% if obj.out != null -%}
+                    {% if obj.ui != null -%}
                         if(!osais_ai_validateObject({{obj}})) {bIsValid=false};
                     {% endif %}
                 {% endfor %}
 
-                const mySubmit = document.getElementById("submit");
-                if(bIsValid) {
-                    mySubmit.classList.remove('disabled');
-                }
-                else {
-                    mySubmit.classList.add('disabled');
-                    return false;
-                }
-
-                const myForm = document.getElementById("formRun");
-                const url = "/run"; 
-                myForm.action = url;
-                return true;
+                return bIsValid;
             }
-
 
         </script>
     </head>
-<body onload="validateForm()">
 
-    <div class="page" >
-        <h2 class=""title>{{name | safe}}</h2>
-        <div class="block_user">
-            <p>You are logged as: 
-                <span class="user" id="user">{{client.user.firstName}}</span>
-                {% if client.user.username == "demo" -%}
-                <br />
-                <span class="">Already have an account? <a href="">Sign-in...</a></span>
-                {% endif %}
-            </p>
-        </div>
+    <body onload="osais_ai_validateForm()">
 
-        <div class="section">
-
-            <div class="col">
-                <div class="col_left">
-                    {% with panel=1 %}
-                        {% include "tpl_panel.html" %}
-                    {% endwith %}
+        <div class="page" >
+            <div class="banner">
+                <a href="https://opensourceais.com/" target="_blank">
+                    <img  class="banner_logo" src="/static/logo-full.png" alt="logo">
+                    <div class="banner_text">OpenSourceAIs</div>
+                </a>
+                <div class="block_user">
+                    <p>You are logged as: 
+                        <span class="user" id="user">{{client.user.firstName}}</span>
+                        {% if client.user.username == "demo" -%}
+                        <br />
+                        <span class="">Already have an account? <a href="https://opensourceais.com/WorldOfAIs/login/" target="_blank">Sign-in...</a></span>
+                        {% endif %}
+                    </p>
                 </div>
             </div>
 
-            <div class="col">
-                <div class="col_right">
-                    {% with panel=2 %}
-                        {% include "tpl_panel.html" %}
-                    {% endwith %}
+            <h2 class=""title>{{name | safe}}</h2>
 
-                    <form id="formRun" name="formRun" action="" 
-                        onsubmit="return validateForm()" 
-                        method="get"
-                    >
-                        <button id="submit" type="submit" class="submit" >
+            <div class="section">
+
+                <div class="col">
+                    <div class="col_left">
+                        {% with panel=1 %}
+                            {% include "tpl_panel.html" %}
+                        {% endwith %}
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="col_right">
+                        {% with panel=2 %}
+                            {% include "tpl_panel.html" %}
+                        {% endwith %}
+
+                        <form id="formRun" name="formRun">
+                            {% for obj in config_ai.params -%}
+                                {% if obj.ui != null -%}
+                                    <input type="hidden" id="{{obj.in}}" name="{{obj.in}}" value="{{obj.default}}" />
+                                {% endif %}
+                            {% endfor %}
+
+                        </form>
+                        <button 
+                            id="submit" 
+                            class="submit" 
+                            onclick="osais_ai_postRequest()" 
+                        >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             &nbsp;
                             <span>Generate!</span>
                         </button>
-                        {% for obj in config_ai.params -%}
-                            {% if obj.out != null -%}
-                                <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{obj.default}}" />
-                            {% endif %}
-                        {% endfor %}
-
-                        {% for obj in config_base.params -%}
-                            {% if obj.out != null -%}
-                            {% if obj.in == "username" -%}
-                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{client.user.username}}" />
-                            {% else %}
-                            {% if obj.in == "token" -%}
-                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{client.token}}" />
-                            {% else %}
-                            <input type="hidden" id="{{obj.out}}" name="{{obj.out}}" value="{{obj.default}}"/>
-                            {% endif %}
-                            {% endif %}
-                            {% endif %}
-                        {% endfor %}
-
                         <p class="submit_footnote">This will generate an image based on your input parameters. Use our APIs for production needs.</p>
-                    </form>
+
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div style="float:left">
-        {% for item in files %}
-            <img src="{{orig}}uploads/ai/{{ item }}" style="max-width: 320px; max-height: 320px; margin: 8px;"/>
-        {% endfor %}
-    </div>
+        <div style="float:left">
+            {% for item in files %}
+                <img src="{{orig}}uploads/ai/{{ item }}" style="max-width: 320px; max-height: 320px; margin: 8px;"/>
+            {% endfor %}
+        </div>
 
-</body>
+    </body>
 </html>

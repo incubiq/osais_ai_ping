@@ -18,6 +18,26 @@ body {
     margin: 0px;
     line-height: inherit;
 }
+.banner {
+    display: block;
+    width: 100%;
+    position: relative;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #eee;
+}
+
+.banner_logo {
+    padding-top:4px;
+    height: 26px;
+}
+
+.banner_text {
+    font-weight: bold;
+    font-size: 22px;
+    position: absolute;
+    left: 60px;
+    top: 0;
+}
 
 .page {
     min-height: calc(100vh - 4rem);
@@ -30,9 +50,10 @@ body {
 
 .page .block_user {
     position: absolute;
-    top: 24px;
-    right: 24px;
-    font-size: 12px;
+    top: -8px;
+    right: 8px;
+    font-size: 11px;
+    line-height: 14px;;
     font-style: italic;
     text-align: right;
 }

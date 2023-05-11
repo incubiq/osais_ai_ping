@@ -4,7 +4,7 @@
  */
 
 function osais_ai_validateObject (_object) {
-    let _obj=document.getElementById(_object.out);
+    let _obj=document.getElementById(_object.in);
     if(!_obj) {
         return false;
     }
@@ -44,7 +44,7 @@ function osais_ai_validateObject (_object) {
     // autofill
     if (_object.ui && _object.ui.autofill) {
         for (var j=0; j<_object.ui.autofill.length; j++ ){
-            let _objAuto=document.getElementById(_object.ui.autofill[j].out);
+            let _objAuto=document.getElementById(_object.ui.autofill[j].in);
             if(_objAuto) {
                 _objAuto.value=_obj.value;
             }
@@ -53,6 +53,26 @@ function osais_ai_validateObject (_object) {
 
     return true;
 }
+
+function osais_ai_validateForm( ) {
+    let bIsValid=true;
+    
+    // validate all objects
+    if(osais_ai_validateAllObjects) {
+        bIsValid=osais_ai_validateAllObjects();
+    }
+
+    const mySubmit = document.getElementById("submit");
+    if(bIsValid) {
+        mySubmit.classList.remove('disabled');
+    }
+    else {
+        mySubmit.classList.add('disabled');
+        return false;
+    }
+    return true;
+}
+
 
 /* 
  *      Multi Toggle fcts
@@ -64,7 +84,7 @@ function osais_ai_onMultiToggleUpdate(_id, _prop, _val) {
     _myObj.classList.add('active');
     _myProp.value=_val;
 
-    validateForm();
+    osais_ai_validateForm();
 }
 
 function osais_ai_onMultiToggleReset(_base, _opt) {
@@ -80,7 +100,7 @@ function osais_ai_onMultiToggleReset(_base, _opt) {
  *      select Picture fcts
  */
 
-function onSelectFile(event) {
+function osais_ai_onSelectFile(event) {
     let _myObj = document.getElementById("selectPicture");
     let _myInput = document.getElementById("url_upload");
 
@@ -89,7 +109,7 @@ function onSelectFile(event) {
         _myObj.classList.add("before");
         _myObj.classList.remove("after");
         _myInput.value=null;
-        validateForm();
+        osais_ai_validateForm();
     }
 
     if(event===null) {
@@ -125,8 +145,8 @@ function onSelectFile(event) {
 
             _myObj.classList.remove("before");
             _myObj.classList.add("after");
-            _myInput.value=selFile;
-            validateForm();
+            _myInput.value=e.target.result;
+            osais_ai_validateForm();
             return true;
         }
     }    
@@ -135,3 +155,55 @@ function onSelectFile(event) {
 /* 
  *      Post Request to OSAIS
  */
+
+let gAuthToken=null;
+let gRoute=null;
+
+function osais_ai_setAuthToken(_token) {
+    gAuthToken=_token;
+}
+
+function osais_ai_setOSAISRoute(_route) {
+    gRoute=_route;
+}
+
+// we use this as a form validation, will always return false, but will send request if possible.
+async function osais_ai_postRequest() {
+    try {
+        // first validate data
+        if(!osais_ai_validateForm( )) {
+            return;
+        }
+
+        // get data
+        const myForm = document.getElementById("formRun");
+        let _data={};
+        for (var i=1 ; i<myForm.length; i++) {
+            var key = myForm[i].id;
+            _data[key]=myForm[i].value;
+        }
+
+        // call osais
+        let jsonStr=_data? JSON.stringify(_data): null;
+        let _query={
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json',
+                "Authorization": "Bearer " + (gAuthToken? gAuthToken : "")
+            },
+        }
+        if(jsonStr) {
+            _query.body=jsonStr;
+        }
+
+        const response = await fetch(gRoute, _query);
+        const json = await response.json();
+
+        // todo : redirect to OSAIS for result
+
+        return false;
+    } catch(error) {
+        console.log(error);
+        return false;
+    }
+}
