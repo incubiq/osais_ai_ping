@@ -122,13 +122,15 @@ def home():
     _config=_convert_python_to_js(config)
     return HTMLResponse(content=template.render(_config), status_code=200)
 
-@app.get('/auth')
-def auth():
-    return {"data":osais_authenticateAI()}
-
 @app.get('/status')
 def status():
     return {"data":osais_getInfo()}
+
+@app.get('/wakeup')
+async def wakeup(request: Request, origin: str):
+    import urllib.parse
+    _origin=urllib.parse.unquote(urllib.parse.unquote(origin))
+    return osais_authenticateAI(_origin)
 
 @app.get('/docker')
 def inDocker():

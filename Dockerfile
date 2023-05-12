@@ -76,6 +76,11 @@ RUN mkdir -p ./app
 WORKDIR /src/app
 
 COPY . .
+RUN rm ./env_local
+RUN rm ./env_docker
+RUN rm ./README.md
+RUN rm ./readme.txt
+RUN rm ./requirements*
 
 # ensure we upgrade osais lib
 RUN  pip3 install osais --upgrade
