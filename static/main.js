@@ -145,7 +145,11 @@ function osais_ai_onSelectFile(event) {
 
             _myObj.classList.remove("before");
             _myObj.classList.add("after");
-            _myInput.value=e.target.result;
+            _myInput.value=selFile.name;
+
+            // store this image on server, so that we have it ready for processing
+            osais_ai_postFile(selFile);
+
             osais_ai_validateForm();
             return true;
         }
@@ -167,6 +171,21 @@ function osais_ai_setOSAISRoute(_route) {
     gRoute=_route;
 }
 
+async function osais_ai_postFile(file){
+    const formData = new FormData()
+    formData.append('file', file)
+    let response=await axios({
+        method: 'post',
+        url: '/upload',
+        data: formData,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'multipart/form-data'
+        },
+    });
+    return response;
+}
+
 // we use this as a form validation, will always return false, but will send request if possible.
 async function osais_ai_postRequest() {
     try {
@@ -178,9 +197,16 @@ async function osais_ai_postRequest() {
         // get data
         const myForm = document.getElementById("formRun");
         let _data={};
-        for (var i=1 ; i<myForm.length; i++) {
+        for (var i=0 ; i<myForm.length; i++) {
             var key = myForm[i].id;
-            _data[key]=myForm[i].value;
+
+            // special case of url_upload => we replace it by filename since we have uploaded it already
+            if(key==="url_upload") {
+                _data["filename"]=myForm[i].value;
+            }
+            else {
+                _data[key]=myForm[i].value;
+            }
         }
 
         // call osais

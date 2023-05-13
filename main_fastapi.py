@@ -22,12 +22,15 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getDemoID, osais_getHarwareInfo, osais_isDocker, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest, downloadImage, osais_uploadeFileToS3
+#from osais import osais_initializeAI, osais_getInfo, osais_getDemoID, osais_getHarwareInfo, osais_isDocker, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
 
 ## register and login this AI
 try:
-    APP_ENGINE=osais_initializeAI()
+    env_file=None
+    if osais_isDocker()==False:
+        env_file="env_local"
+    APP_ENGINE=osais_initializeAI(env_file)
     sys.stdout.flush()
 
 except Exception as err:
@@ -47,27 +50,30 @@ from _ping import fn_run
 
 ## Test if this AI works (used for warm-up call)
 def _test(): 
-    import time
-    from werkzeug.datastructures import MultiDict
-    ts=int(time.time())
-    sample_args = MultiDict([
-        ('-u', 'test_user'),
-        ('-uid', str(ts)),
-        ('-t', 'a641d6413a99f8fe50a28f31b456af7ccc38cd34baac87e5f978d140bb0e1fc2'),
-        ('-width', '512'),
-        ('-height', '512'),
-        ('url_upload', 'http://localhost:3022/assets/clown.jpg'),
-        ('-o', str(ts)+'.jpg'),
-        ('-local', 'True'),
-        ('-warmup', 'True'),
-#        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
-#        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
-#        ('-orig', 'http://192.168.1.83:3022/'),
-    ])
+    print("\r\nwill attempt a warm up request...")
     try:
+        import time
+        from werkzeug.datastructures import MultiDict
+        ts=int(time.time())
+        sample_args = MultiDict([
+            ('-u', 'test_user'),
+            ('-uid', str(ts)),
+            ('-t', osais_getDemoID()),
+            ('-width', '512'),
+            ('-height', '512'),
+    #        ('url_upload', ''),         // no upload, we get the warmup image from the input dir
+            ('-o', str(ts)+'.jpg'),
+            ('-filename', 'clown.jpg'),
+            ('-local', 'True'),
+            ('-warmup', 'True'),
+    #        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
+    #        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
+    #        ('-orig', 'http://192.168.1.83:3022/'),
+        ])
         osais_runAI(fn_run, sample_args)
         return True
     except:
+        print("Could not call warm up!\r\n")
         return False
 
 ## warmup
@@ -77,7 +83,7 @@ _test()
 #       init app (fastapi)
 ## ------------------------------------------------------------------------
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -167,16 +173,34 @@ def test():
 #       test routes when in local mode
 ## ------------------------------------------------------------------------
 
-if osais_isLocal():
-    @app.get('/root')
-    def root():
-        return osais_getDirectoryListing("./")
+#if osais_isLocal():
+@app.get('/root')
+def root():
+    return HTMLResponse(content=osais_getDirectoryListing("./"), status_code=200)
 
-    @app.get('/input')
-    def input():
-        return osais_getDirectoryListing("./_input")
+@app.get('/input')
+def input():
+    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
 
-    @app.get('/output')
-    def output():
-        return osais_getDirectoryListing("./_output")
-    
+@app.get('/output')
+def output():
+    return HTMLResponse(content=osais_getDirectoryListing("./_output"), status_code=200)
+
+@app.post('/upload')
+async def upload(file: UploadFile):
+  filename = file.filename
+  content = await file.read()
+  with open(f"./_input/{filename}", "wb") as f:
+    f.write(content)
+    osais_uploadeFileToS3(f"./_input/{filename}", "input/")
+
+    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
+
+@app.post('/download')
+def download(request: Request):
+    import urllib.parse
+    query_string = request.url.query
+    url_parameter = urllib.parse.parse_qs(query_string)['url'][0]
+    _image=downloadImage(url_parameter)
+    print("downloaded : "+_image)
+    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)

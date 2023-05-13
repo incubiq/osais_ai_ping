@@ -18,6 +18,7 @@ RUN apt-get update && \
     python3-dev \
     python3-pip \
     python3-setuptools \
+    python-multipart \
     build-essential \
     cmake \
     git \
@@ -92,6 +93,9 @@ RUN mkdir -p ./_input
 RUN mkdir -p ./_output
 RUN chown -R root:root ./_input
 RUN chown -R root:root ./_output
+
+# copy an image for warmup test
+COPY ./static/clown.jpg ./_input/clown.jpg
 
 # overload config with those default settings
 ENV USERNAME=3fbe53cba18a5c73c3b69421e4f44812460c2e55b7634a77006e54e3f5605a3b
