@@ -327,6 +327,119 @@ button.multiToggle.disabled {
     color: rgb(113 128 150 / var(--tw-text-opacity));
 }
 
+.modal.active {
+    display: block;
+}
+.modal {
+    display: none;
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -webkit-transform: translate(-50%,-50%);
+    transform: translate(-50%,-50%);
+    width: 90%;
+    background-color: #fefefe;
+    max-width: 500px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    color: #3f272f;
+    color: var(--dark-text);
+    box-shadow: 0 6px 22px rgba(63,39,47,.5);
+    box-shadow: 0 6px 22px var(--shadow);
+    overflow: hidden;
+}
+.mBackground {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #ccc;
+    opacity: 0.7;
+}
+.mBackground.active {
+    display: block;
+}
+
+.modal .mHeader {
+    border-bottom: 1px solid #eee;
+    display: flex;
+    background-color: #f8f8fb;
+    padding: 12px 20px;
+    text-align: center;
+    min-height: 32px;
+}
+.modal .mHeader .banner_text {
+    display: inline-block;
+    position: absolute;
+    top: 18px;
+    left: initial;
+    font-size: initial;
+    margin-left: 6px;
+}
+.modal .mHeader .close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: 1px solid #666;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background-color: #e0e0e0;
+}
+
+.modal .mFooter {
+    border-top: 1px solid #eee;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: calc(100% - 24px);
+    font-size: 11px;
+    text-align: right;
+    padding: 6px 12px;
+    color: #666;
+}
+.modal .mPanel {
+    padding: 12px 20px;
+    text-align: center;
+    background: hsla(0,0%,100%,.7);
+    min-height: 250px;
+    width: calc(100% - 40px);
+    position: relative;
+    min-height: 196px;
+}
+
+.modal .mPanel .left {
+    display: inline-block;
+    margin: 12px;
+}
+.modal .mPanel .right {
+    display: inline-block;
+    vertical-align: top;
+    padding: 24px;
+    max-width: 40%;
+}
+
+.modal .mPanel .preview {
+    width: 120px;
+    height: 120px;
+}
+
+.modal .mPanel .beforeProcessing {
+    display: none;
+}
+.modal .mPanel .afterProcessing {
+    display: none;
+}
+
+.modal.before .mPanel .beforeProcessing {
+    display: block;
+}
+
+.modal.after .mPanel .afterProcessing {
+    display: block;
+}
 
 @media (min-width: 640px) {
     .section {

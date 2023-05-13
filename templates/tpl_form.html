@@ -72,7 +72,7 @@
                         <button 
                             id="submit" 
                             class="submit" 
-                            onclick="osais_ai_postRequest()" 
+                            onclick="osais_ai_postRequest('{{name}}')" 
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             &nbsp;
@@ -82,6 +82,33 @@
 
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="mBackground" id="idBackground"></div>
+        <div class="modal" id="idModal">
+            <div class="mHeader">
+                <a href="https://opensourceais.com/" target="_blank">
+                    <img  class="banner_logo" src="/static/logo-full.png" alt="logo">
+                    <div class="banner_text">OpenSourceAIs</div>
+                </a>
+                <button class="close btn" onClick="osais_ai_hideModal()">X</button>
+            </div>
+            <div class="mPanel">
+                <div class="left">
+                    <img id="idModalPreviewImage" class="preview" alt="your input image">
+                </div>
+                <div class="right">
+                    <div class="beforeProcessing">                    
+                        Processing your request... 
+                    </div>
+                    <div class="afterProcessing">
+                        Your generated AI content is available <a id="idRef" href="#" target="_blank">here</a>.                     
+                    </div>
+                </div>
+            </div>
+            <div class="mFooter">
+                by OpenSourceAIs.com
             </div>
         </div>
 

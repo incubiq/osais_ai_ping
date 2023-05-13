@@ -187,7 +187,7 @@ async function osais_ai_postFile(file){
 }
 
 // we use this as a form validation, will always return false, but will send request if possible.
-async function osais_ai_postRequest() {
+async function osais_ai_postRequest(_name) {
     try {
         // first validate data
         if(!osais_ai_validateForm( )) {
@@ -209,6 +209,9 @@ async function osais_ai_postRequest() {
             }
         }
 
+        // show processing modal...
+        osais_ai_showModal()
+
         // call osais
         let jsonStr=_data? JSON.stringify(_data): null;
         let _query={
@@ -224,12 +227,59 @@ async function osais_ai_postRequest() {
 
         const response = await fetch(gRoute, _query);
         const json = await response.json();
-
-        // todo : redirect to OSAIS for result
+        osais_ai_showModalLink(_name, json.data.uid);
 
         return false;
     } catch(error) {
         console.log(error);
         return false;
     }
+}
+
+function _showModal(stage, objParam) {
+    let _modalBackground = document.getElementById("idBackground");
+    let _modalPreviewImage = document.getElementById("idModalPreviewImage");        
+    let _myImg = document.getElementById("idUploadImage");
+    let _modal = document.getElementById("idModal");
+
+    switch(stage) {
+        // hide
+        case 0:
+            _modalBackground.classList.remove('active');
+            _modal.classList.remove('active');    
+            _modal.classList.remove('before');    
+            _modal.classList.remove('after');    
+            break;
+
+        // in progress
+        case 1:
+            _modalPreviewImage.src=_myImg.src;
+            _modalBackground.classList.add('active');
+            _modal.classList.add('active');    
+            _modal.classList.add('before');    
+            break;
+
+        // show link to result
+        case 2:
+            _modal.classList.remove('before');    
+            _modal.classList.add('after');    
+            let _href = document.getElementById("idRef");
+            _href.href="https://opensourceais.com/WorldOfAIs/ai/"+objParam.name+"/"+objParam.uid
+            break;
+    }
+}
+
+function osais_ai_showModalLink(_name, _uid) {
+    _showModal(2, {
+        name: _name,
+        uid: _uid
+    });
+}
+
+function osais_ai_showModal() {
+    _showModal(1, null);
+}
+
+function osais_ai_hideModal() {
+    _showModal(0);
 }

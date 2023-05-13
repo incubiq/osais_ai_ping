@@ -18,7 +18,6 @@ RUN apt-get update && \
     python3-dev \
     python3-pip \
     python3-setuptools \
-    python-multipart \
     build-essential \
     cmake \
     git \
@@ -62,6 +61,7 @@ RUN pip3 install \
     Jinja2==3.1.2 \
     boto3==1.26.130 \
     osais>=1.0.0 \
+    python-multipart==0.0.6 \
     uvicorn[standard]==0.17
 
 # NVIDIA specials
