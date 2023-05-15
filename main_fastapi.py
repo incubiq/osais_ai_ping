@@ -22,8 +22,8 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getDemoID, osais_getHarwareInfo, osais_isDocker, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest, downloadImage, osais_uploadeFileToS3
-#from osais import osais_initializeAI, osais_getInfo, osais_getDemoID, osais_getHarwareInfo, osais_isDocker, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest, downloadImage, osais_uploadeFileToS3
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
 
 ## register and login this AI
 try:
@@ -49,7 +49,7 @@ if APP_ENGINE==None:
 from _ping import fn_run
 
 ## Test if this AI works (used for warm-up call)
-def _test(): 
+def _warmup(): 
     print("\r\nwill attempt a warm up request...")
     try:
         import time
@@ -58,7 +58,7 @@ def _test():
         sample_args = MultiDict([
             ('-u', 'test_user'),
             ('-uid', str(ts)),
-            ('-t', osais_getDemoID()),
+            ('-t', osais_getClientID()),
             ('-width', '512'),
             ('-height', '512'),
     #        ('url_upload', ''),         // no upload, we get the warmup image from the input dir
@@ -75,9 +75,6 @@ def _test():
     except:
         print("Could not call warm up!\r\n")
         return False
-
-## warmup
-_test()
 
 ## ------------------------------------------------------------------------
 #       init app (fastapi)
@@ -98,6 +95,9 @@ app.mount(
 ## log user (as demo) if not already
 global dataAuth
 dataAuth=osais_authenticateClient(None, None)
+
+## warmup
+_warmup()
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
