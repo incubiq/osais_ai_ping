@@ -22,15 +22,22 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest, downloadImage, osais_uploadeFileToS3
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isLocal, osais_authenticateClient, osais_postRequest
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest
+
+global gObjClient
 
 ## register and login this AI
 try:
     env_file=None
     if osais_isDocker()==False:
         env_file="env_local"
-    APP_ENGINE=osais_initializeAI(env_file)
+    
+    ## init the AI and if it's config as a VAI, log is as VAI into OSAIS
+    objInit=osais_initializeAI(env_file)
+    APP_ENGINE=objInit["engine"]
+    gObjClient=objInit["client"]
+
     sys.stdout.flush()
 
 except Exception as err:
@@ -59,12 +66,11 @@ def _warmup():
             ('-u', 'test_user'),
             ('-uid', str(ts)),
             ('-t', osais_getClientID()),
+            ('-cycle', '0'),
             ('-width', '512'),
             ('-height', '512'),
-    #        ('url_upload', ''),         // no upload, we get the warmup image from the input dir
             ('-o', str(ts)+'.jpg'),
             ('-filename', 'clown.jpg'),
-            ('-local', 'True'),
             ('-warmup', 'True'),
     #        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
     #        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
@@ -92,12 +98,43 @@ app.mount(
     name="static",
 )
 
-## log user (as demo) if not already
-global dataAuth
-dataAuth=osais_authenticateClient(None, None)
 
 ## warmup
 _warmup()
+
+## ------------------------------------------------------------------------
+#       routes for uploading / downloading files
+## ------------------------------------------------------------------------
+
+@app.post('/upload')
+async def upload(file: UploadFile):
+  filename = file.filename
+  try:
+    content = await file.read()
+    with open(f"./_input/{filename}", "wb") as f:
+        # save locally (to then upload to S3)
+        f.write(content)
+
+        # upload to S3
+        _filename=osais_uploadeFileToS3(f"./_input/{filename}", "input/")
+
+        # return the S3 filename
+        return {filename: _filename}
+  except:
+    print("Could not upload file "+filename+"\r\n")
+    return {"data": None}
+
+  return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
+
+@app.post('/download')
+def download(request: Request):
+    import urllib.parse
+    query_string = request.url.query
+    url_parameter = urllib.parse.parse_qs(query_string)['url'][0]
+    _image=downloadImage(url_parameter)
+    print("downloaded : "+_image)
+    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
+
 
 ## ------------------------------------------------------------------------
 #       routes for this AI (important ones)
@@ -119,9 +156,9 @@ def _convert_python_to_js(data):
 
 @app.get('/')
 def home():
-    global dataAuth
+    global gObjClient
     config=osais_getInfo()
-    config["client"]=dataAuth["data"]
+    config["client"]=gObjClient
 
     env = Environment(loader=FileSystemLoader('./templates/'))
     template = env.get_template('tpl_form.html')
@@ -166,14 +203,14 @@ def gpu():
 
 @app.get('/test')
 def test():
-    bRet=_test()
+    bRet=_warmup()
     return {"data": bRet}
 
 ## ------------------------------------------------------------------------
-#       test routes when in local mode
+#       test routes when in DEBUG mode
 ## ------------------------------------------------------------------------
 
-#if osais_isLocal():
+#if osais_isDebug():
 @app.get('/root')
 def root():
     return HTMLResponse(content=osais_getDirectoryListing("./"), status_code=200)
@@ -185,22 +222,3 @@ def input():
 @app.get('/output')
 def output():
     return HTMLResponse(content=osais_getDirectoryListing("./_output"), status_code=200)
-
-@app.post('/upload')
-async def upload(file: UploadFile):
-  filename = file.filename
-  content = await file.read()
-  with open(f"./_input/{filename}", "wb") as f:
-    f.write(content)
-    osais_uploadeFileToS3(f"./_input/{filename}", "input/")
-
-    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
-
-@app.post('/download')
-def download(request: Request):
-    import urllib.parse
-    query_string = request.url.query
-    url_parameter = urllib.parse.parse_qs(query_string)['url'][0]
-    _image=downloadImage(url_parameter)
-    print("downloaded : "+_image)
-    return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)

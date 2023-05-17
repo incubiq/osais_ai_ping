@@ -1,6 +1,6 @@
 {
     "name": "osais",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "description": "OSAIS params",
     "default_cost": 0,
     "origin": "",
@@ -35,23 +35,11 @@
         "type": "string",
         "default": null
     }, {
-        "in": "islocal",
-        "out": "-local",
-        "isMandatory": false,
-        "type": "boolean",
-        "default": "False"
-    }, {
         "in": "cycle",
         "out": "-cycle",
         "isMandatory": false,
         "type": "int",
         "default": 0
-    }, {
-        "in": "filename",
-        "out": "-filename",
-        "isMandatory": false,
-        "type": "string",
-        "default": null
     }, {
         "in": "idir",
         "out": "-idir",

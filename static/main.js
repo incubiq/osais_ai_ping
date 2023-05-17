@@ -148,7 +148,16 @@ function osais_ai_onSelectFile(event) {
             _myInput.value=selFile.name;
 
             // store this image on server, so that we have it ready for processing
-            osais_ai_postFile(selFile);
+            osais_ai_postFile(selFile)
+            .then(dataS3 => {
+                const myUpload = document.getElementById("url_upload");
+                if(myUpload && dataS3 && dataS3.data && dataS3.data.filename) {
+                    myUpload.value=dataS3.data.filename;
+                }
+            })
+            .catch(err=> {
+
+            })
 
             osais_ai_validateForm();
             return true;
@@ -199,14 +208,7 @@ async function osais_ai_postRequest(_name) {
         let _data={};
         for (var i=0 ; i<myForm.length; i++) {
             var key = myForm[i].id;
-
-            // special case of url_upload => we replace it by filename since we have uploaded it already
-            if(key==="url_upload") {
-                _data["filename"]=myForm[i].value;
-            }
-            else {
-                _data[key]=myForm[i].value;
-            }
+            _data[key]=myForm[i].value;
         }
 
         // show processing modal...

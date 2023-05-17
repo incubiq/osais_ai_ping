@@ -58,7 +58,6 @@ def _test():
         ('-height', '512'),
         ('url_upload', 'http://localhost:3022/assets/clown.jpg'),
         ('-o', str(ts)+'.jpg'),
-        ('-local', 'True'),
         ('-warmup', 'True'),
 #        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
 #        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
