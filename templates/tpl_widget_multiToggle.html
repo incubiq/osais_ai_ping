@@ -18,7 +18,15 @@
                 class="multiToggle active"    
             {% else %}
 
-                {% if object.freeAccess["$max"] > btn_value -%}
+                {%- set freeAccess = true -%}
+                {% if object.freeAccess -%}
+                    {% if object.freeAccess["$max"] > btn_value -%}
+                    {% else %}
+                    {%- set freeAccess = false -%}
+                    {% endif %}
+                {% endif %}
+
+                {% if freeAccess -%}
                     class="multiToggle"    
                 {% else %}
                     class="multiToggle disabled"    

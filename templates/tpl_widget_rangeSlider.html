@@ -1,0 +1,51 @@
+
+{%- set isVisible = true -%}
+
+{% if isVisible == true -%}
+
+<div 
+    class="block"   
+    id="block_{{object.in}}"
+>
+    <div class="subtitle" >{{ object.ui.title }}</div>
+
+    <div class="subBlock">
+
+        {%- set initValue = object.default -%}
+        {%- set maxValue = object.ui.max -%}
+        {%- set minValue = object.ui.min -%}
+        {%- set unitValue = object.ui.unit -%}
+        {% if object.freeAccess -%}
+            {%- set maxValue = object.freeAccess["$max"] -%}
+            {%- if initValue > maxValue -%} 
+                {%- set unitValue = maxValue -%}
+            {% endif %}
+        {% endif %}
+
+        {% if object.ui.displayAsPercent -%}
+            {%- set unitValue = "%" -%}
+            {%- set minValue = "0" -%}
+            {%- set maxValue = "100" -%}
+            {%- set initValue = 100 * object.default / object.ui.max  -%}
+        {% endif %}
+
+        <input 
+            id="widget_{{object.in}}"
+            type="range" 
+            class="rangeSlider" 
+            min="{{minValue}}" 
+            max="{{maxValue}}" 
+            value="{{initValue}}"
+            onchange="osais_ai_onRangeSliderChange('rangeSlider_{{object.in}}', 'rangeSlider_value_{{object.in}}');"
+            oninput="osais_ai_onRangeSliderChange('rangeSlider_{{object.in}}', 'rangeSlider_value_{{object.in}}');"
+        >
+        <div 
+            class="rangeSlider_value"             
+        >
+            <span id="rangeSlider_value_{{object.in}}">{{initValue}}</span>
+            <span>{{unitValue}}</span>
+        </div>
+
+    </div>
+</div>
+{% endif %}

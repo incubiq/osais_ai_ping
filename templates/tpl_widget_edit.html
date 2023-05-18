@@ -1,0 +1,25 @@
+
+<div 
+    class="block"
+    id="block_{{object.in}}"
+>
+    <div class="subtitle" >{{ object.ui.title }}</div>
+
+    {%- set initValue = object.default -%}
+    {% if object.default == "null" -%}
+        {%- set initValue = "" -%}
+    {% endif %}
+
+    {%- set placeholder = object.ui.placeholder -%}
+
+    <div class="subBlock">
+        <input 
+            id="widget_{{object.in}}"
+            type="text" 
+            placeholder="{{placeholder}}" 
+            class="wEdit" 
+            value="{{initValue}}"
+        >
+
+    </div>
+</div>

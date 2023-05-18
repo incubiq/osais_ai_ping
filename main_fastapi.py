@@ -23,7 +23,7 @@ import sys
 import os
 
 from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
 
 global gObjClient
 
@@ -98,7 +98,6 @@ app.mount(
     name="static",
 )
 
-
 ## warmup
 _warmup()
 
@@ -116,11 +115,11 @@ async def upload(file: UploadFile):
         f.write(content)
 
         # upload to S3
-        _filename=osais_uploadeFileToS3(f"./_input/{filename}", "input/")
+        _filename=osais_uploadFileToS3(f"./_input/{filename}", "input/")
 
         # return the S3 filename
         return {filename: _filename}
-  except:
+  except Exception as err:
     print("Could not upload file "+filename+"\r\n")
     return {"data": None}
 
@@ -131,7 +130,7 @@ def download(request: Request):
     import urllib.parse
     query_string = request.url.query
     url_parameter = urllib.parse.parse_qs(query_string)['url'][0]
-    _image=downloadImage(url_parameter)
+    _image=osais_downloadFileFromS3(url_parameter)
     print("downloaded : "+_image)
     return HTMLResponse(content=osais_getDirectoryListing("./_input"), status_code=200)
 

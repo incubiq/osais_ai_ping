@@ -73,6 +73,15 @@ function osais_ai_validateForm( ) {
     return true;
 }
 
+/* 
+ *      Range Slider fcts
+ */
+
+function osais_ai_onRangeSliderChange(_idSlider, _idValue) {
+    let _eltSlider = document.getElementById(_idSlider);
+    let _eltValue = document.getElementById(_idValue);
+    _eltValue.innerHTML=_eltSlider.value;
+}
 
 /* 
  *      Multi Toggle fcts
@@ -100,11 +109,11 @@ function osais_ai_onMultiToggleReset(_base, _opt) {
  *      select Picture fcts
  */
 
-function osais_ai_onSelectFile(event) {
-    let _myObj = document.getElementById("selectPicture");
-    let _myInput = document.getElementById("url_upload");
+function osais_ai_onSelectFile(event, eltSelPict, eltInForm) {
+    let _myObj = document.getElementById(eltSelPict);
+    let _myInput = document.getElementById(eltInForm);      // eg "url_upload"
 
-    let _resetFile=function(){
+    let _resetFile=function(_myObj){
         // remove prev image
         _myObj.classList.add("before");
         _myObj.classList.remove("after");
@@ -113,7 +122,7 @@ function osais_ai_onSelectFile(event) {
     }
 
     if(event===null) {
-        _resetFile();
+        _resetFile(_myObj);
         return false;
     }
 
@@ -123,7 +132,7 @@ function osais_ai_onSelectFile(event) {
     if(event.target.files.length!==0) {
         selFile=event.target.files[0];
         if(!selFile) {
-            _resetFile();
+            _resetFile(_myObj);
             return false;
         }
     }
@@ -139,7 +148,7 @@ function osais_ai_onSelectFile(event) {
         
             // do not take anything else than PNG/JPEG
             if(selFile.type!== "image/png" && selFile.type!== "image/jpeg") {
-                _resetFile();
+                _resetFile(_myObj);
                 return false;                    
             }
 
@@ -150,9 +159,12 @@ function osais_ai_onSelectFile(event) {
             // store this image on server, so that we have it ready for processing
             osais_ai_postFile(selFile)
             .then(dataS3 => {
-                const myUpload = document.getElementById("url_upload");
-                if(myUpload && dataS3 && dataS3.data && dataS3.data.filename) {
-                    myUpload.value=dataS3.data.filename;
+                if(_myInput && dataS3 && dataS3.data) {
+                    try {
+                        let _s3=dataS3.data[selFile.name];
+                        _myInput.value=_s3;
+                    }
+                    catch(err){}
                 }
             })
             .catch(err=> {

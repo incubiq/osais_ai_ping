@@ -217,6 +217,34 @@ button.multiToggle.disabled {
     pointer-events: none;
 }
 
+.wEdit {
+    margin-top: 0.5rem;
+    width: 100%;
+    border-radius: 0.5rem;
+    background-color: rgb(247 250 252);
+    padding: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid rgb(237 242 247);
+}
+
+.rangeSlider {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    height: 1rem;
+    width: 12rem;
+    appearance: none;
+    border-radius: 0.5rem;
+    background-color: rgb(235 248 255);
+}
+
+.rangeSlider_value {
+    position: relative;
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
 .selectPicture {
     position: relative;
     margin-top: 0.25rem;
