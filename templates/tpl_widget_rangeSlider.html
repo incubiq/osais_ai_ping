@@ -11,6 +11,10 @@
 
     <div class="subBlock">
 
+        {%- set idWidget = "widget_"+object.in -%}
+        {%- set idInForm = object.in -%}
+
+        {%- set displayAsPercent = false -%}
         {%- set initValue = object.default -%}
         {%- set maxValue = object.ui.max -%}
         {%- set minValue = object.ui.min -%}
@@ -23,6 +27,7 @@
         {% endif %}
 
         {% if object.ui.displayAsPercent -%}
+            {%- set displayAsPercent = true -%}
             {%- set unitValue = "%" -%}
             {%- set minValue = "0" -%}
             {%- set maxValue = "100" -%}
@@ -30,14 +35,14 @@
         {% endif %}
 
         <input 
-            id="widget_{{object.in}}"
+            id="{{idWidget}}"
             type="range" 
             class="rangeSlider" 
             min="{{minValue}}" 
             max="{{maxValue}}" 
             value="{{initValue}}"
-            onchange="osais_ai_onRangeSliderChange('rangeSlider_{{object.in}}', 'rangeSlider_value_{{object.in}}');"
-            oninput="osais_ai_onRangeSliderChange('rangeSlider_{{object.in}}', 'rangeSlider_value_{{object.in}}');"
+            onchange="osais_ai_onRangeSliderChange('{{idWidget}}', '{{idInForm}}', 'rangeSlider_value_{{object.in}}', ('{{displayAsPercent}}'=='True'), {{object.ui.min}}, {{object.ui.max}} );"
+            oninput="osais_ai_onRangeSliderChange('{{idWidget}}', '{{idInForm}}', 'rangeSlider_value_{{object.in}}', ('{{displayAsPercent}}'=='True'), {{object.ui.min}}, {{object.ui.max}});"
         >
         <div 
             class="rangeSlider_value"             

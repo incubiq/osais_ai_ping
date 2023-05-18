@@ -74,25 +74,45 @@ function osais_ai_validateForm( ) {
 }
 
 /* 
+ *      Edit fcts
+ */
+
+function osais_ai_onEditChange(_idEdit, _idInForm) {
+    let _eltEdit = document.getElementById(_idEdit);
+    let _eltInForm = document.getElementById(_idInForm);
+    _eltInForm.value=_eltEdit.value;
+}
+
+/* 
  *      Range Slider fcts
  */
 
-function osais_ai_onRangeSliderChange(_idSlider, _idValue) {
+function osais_ai_onRangeSliderChange(_idSlider, _idInForm, _idValue, _displayAsPercent, _min, _max) {
     let _eltSlider = document.getElementById(_idSlider);
+    let _eltInForm = document.getElementById(_idInForm);
     let _eltValue = document.getElementById(_idValue);
     _eltValue.innerHTML=_eltSlider.value;
+    let _rebased=parseFloat(_eltSlider.value);
+    if(_displayAsPercent) {
+        _min=parseFloat(_min);
+        _max=parseFloat(_max);
+        _rebased= _min+ (parseFloat(_eltSlider.value)/100) * (_max-_min);
+    }
+    _eltInForm.value=_rebased;
 }
 
 /* 
  *      Multi Toggle fcts
  */
 
-function osais_ai_onMultiToggleUpdate(_id, _prop, _val) {
+function osais_ai_onMultiToggleUpdate(_id, _idInForm, _prop, _val) {
     let _myObj = document.getElementById(_id);
+    let _eltInForm = document.getElementById(_idInForm);
     let _myProp = document.getElementById(_prop);
     _myObj.classList.add('active');
     _myProp.value=_val;
 
+    _eltInForm.value=_val;
     osais_ai_validateForm();
 }
 

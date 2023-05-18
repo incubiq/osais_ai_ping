@@ -5,14 +5,18 @@
     <div class="subBlock">
 
         {% for btn_value in object.accept["$in"] -%}
+
+        {%- set idWidget = "widget_"+object.in -%}
+        {%- set idInForm = object.in -%}
+    
         <button 
             onclick="
-            osais_ai_onMultiToggleReset('{{object.in}}', {{object.accept["$in"]}} );
-            osais_ai_onMultiToggleUpdate('{{object.in}}_{{btn_value}}', '{{object.in}}', '{{btn_value}}');
+            osais_ai_onMultiToggleReset('{{idWidget}}', {{object.accept["$in"]}} );
+            osais_ai_onMultiToggleUpdate('{{idWidget}}_{{btn_value}}', '{{idInForm}}', '{{object.in}}', '{{btn_value}}');
             
             "
             
-            id="{{object.in}}_{{btn_value}}"
+            id="{{idWidget}}_{{btn_value}}"
 
             {% if object.default == btn_value -%}
                 class="multiToggle active"    

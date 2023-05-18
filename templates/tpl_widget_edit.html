@@ -11,14 +11,19 @@
     {% endif %}
 
     {%- set placeholder = object.ui.placeholder -%}
+    {%- set idInForm = object.in -%}
 
     <div class="subBlock">
+
+        {%- set idWidget = "widget_"+object.in -%}
+
         <input 
-            id="widget_{{object.in}}"
+            id="{{idWidget}}"
             type="text" 
             placeholder="{{placeholder}}" 
             class="wEdit" 
             value="{{initValue}}"
+            oninput="osais_ai_onEditChange('{{idWidget}}', '{{idInForm}}');"
         >
 
     </div>
