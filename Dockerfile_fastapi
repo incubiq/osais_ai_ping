@@ -53,6 +53,7 @@ RUN pip3 install \
 
 # install flas and various files for running host
 RUN pip3 install \
+    asyncio==3.4.3 \
     fastapi==0.74 \
     requests==2.28.1  \
     schedule==1.1.0 \
@@ -88,6 +89,9 @@ RUN mkdir -p ./_input
 RUN mkdir -p ./_output
 RUN chown -R root:root ./_input
 RUN chown -R root:root ./_output
+
+# copy an image for warmup test
+COPY ./static/warmup.jpg ./_input/warmup.jpg
 
 # overload config with those default settings
 ENV USERNAME=3fbe53cba18a5c73c3b69421e4f44812460c2e55b7634a77006e54e3f5605a3b

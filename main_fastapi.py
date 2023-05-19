@@ -22,8 +22,8 @@
 import sys
 import os
 
-from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
-#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
+from osais_debug import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_warmupAI, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
+#from osais import osais_initializeAI, osais_getInfo, osais_getHarwareInfo, osais_isDocker, osais_getClientID, osais_getDirectoryListing, osais_warmupAI, osais_runAI, osais_authenticateAI, osais_isDebug, osais_authenticateClient, osais_postRequest, osais_downloadImage, osais_uploadFileToS3, osais_downloadFileFromS3
 
 global gObjClient
 
@@ -69,14 +69,13 @@ def _warmup():
             ('-cycle', '0'),
             ('-width', '512'),
             ('-height', '512'),
-            ('-o', str(ts)+'.jpg'),
-            ('-filename', 'clown.jpg'),
-            ('-warmup', 'True'),
+            ('-o', 'warmup.jpg'),
+            ('-filename', 'warmup.jpg'),
     #        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
     #        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
     #        ('-orig', 'http://192.168.1.83:3022/'),
         ])
-        osais_runAI(fn_run, sample_args)
+        osais_warmupAI(fn_run, sample_args)
         return True
     except:
         print("Could not call warm up!\r\n")
@@ -115,7 +114,9 @@ async def upload(file: UploadFile):
         f.write(content)
 
         # upload to S3
-        _filename=osais_uploadFileToS3(f"./_input/{filename}", "input/")
+        _filename=osais_uploadFileToS3(f"./_input/{filename}", "input/", {
+            "uid": 0
+        })
 
         # return the S3 filename
         return {filename: _filename}
