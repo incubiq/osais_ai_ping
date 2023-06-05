@@ -9,4 +9,6 @@ _output/*
 
 osais_debug.py
 env_local
-env_docker
+env_docker_prod
+env_docker_local
+env_secret

@@ -77,14 +77,24 @@ ENV PATH /usr/local/nvidia/bin:$PATH
 RUN mkdir -p ./app
 WORKDIR /src/app
 
-COPY . .
+# copy files
+RUN mkdir -p ./static
+RUN mkdir -p ./templates
+RUN chown -R root:root ./static
+RUN chown -R root:root ./templates
+
+COPY ./static/* ./static
+COPY ./templates/* ./templates
+COPY ./osais.json .
+COPY ./ping.json .
+COPY ./_ping.py .
+COPY ./main_fastapi.py .
+COPY ./osais_debug.py .
 
 # ensure we upgrade osais lib
 RUN  pip3 install osais --upgrade
 
 # prepare for mounting images
-RUN rm -r ./_input
-RUN rm -r ./_output
 RUN mkdir -p ./_input
 RUN mkdir -p ./_output
 RUN chown -R root:root ./_input

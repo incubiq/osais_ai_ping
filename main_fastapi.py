@@ -29,12 +29,17 @@ global gObjClient
 
 ## register and login this AI
 try:
+    ## in docker? we take env from os.get... (not from file)
     env_file=None
+    env_secret=None
+
+    ## not in docker? we take the local env file
     if osais_isDocker()==False:
         env_file="env_local"
+        env_secret="env_secret"
     
     ## init the AI and if it's config as a VAI, log is as VAI into OSAIS
-    objInit=osais_initializeAI(env_file)
+    objInit=osais_initializeAI(env_file, env_secret)
     APP_ENGINE=objInit["engine"]
     gObjClient=objInit["client"]
 
