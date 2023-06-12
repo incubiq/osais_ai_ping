@@ -6,65 +6,42 @@
 ##          - do ping (ie nothing, only copy an image to prove full way round works)
 ##
 
-import os
-import sys
-import platform
-import shutil
+from ai.runai import fnRun
 
-absFilePath = os.path.abspath(__file__)                
-fileDir = os.path.dirname(os.path.abspath(__file__))
-root=os.path.join(fileDir, '..') 
-sys.path.append(root) 
+##
+##      ENTRY POINTS
+##
 
-import argparse
-
-print("\r - Current version of Python is ", sys.version)
-print("\r - Platform version: ", platform.python_version())
-print ("\r - "+argparse.__name__ + " v"+argparse.__version__)
-
-import subprocess
-
-current_machine_id = None
-if os.name == "nt":  # Windows
-    current_machine_id = subprocess.check_output('wmic csproduct get uuid').decode().split('\n')[1].strip()
-else:  # Linux / Docker
-    current_machine_id = os.popen("cat /etc/machine-id").read().strip() ## os.uname()[1]
-print ("\r - machine uid: "+current_machine_id)
-
-import uuid 
-print ("\r - machine uuid: "+str (hex(uuid.getnode())))
-
-default_image_width = 512
-default_image_height = 512
-
-def fn_run(_args): 
-    vq_parser = argparse.ArgumentParser()
-
-    # OSAIS arguments
-    vq_parser.add_argument("-odir", "--outdir", type=str, help="Output directory", default="./_output/", dest='outdir')
-    vq_parser.add_argument("-idir", "--indir", type=str, help="input directory", default="./_input/", dest='indir')
-
-    # Add the PING arguments
-    vq_parser.add_argument("-p",    "--prompts", type=str, help="Text prompts", default=None, dest='prompts')
-    vq_parser.add_argument("-filename","--init_image", type=str, help="Initial image", default="clown.jpg", dest='init_image')
-    vq_parser.add_argument("-width",  "--width", type=int, help="Image width", default=default_image_width, dest='wImage')
-    vq_parser.add_argument("-height",  "--height", type=int, help="Image height", default=default_image_height, dest='hImage')
-    vq_parser.add_argument("-o",    "--output", type=str, help="Output filename", default="output.png", dest='output')
-
+## WARMUP Data
+def getWarmupData(_id):
     try:
-        args = vq_parser.parse_args(_args)
-        print(args)
+        import time
+        from werkzeug.datastructures import MultiDict
+        ts=int(time.time())
+        sample_args = MultiDict([
+            ('-u', 'test_user'),
+            ('-uid', str(ts)),
+            ('-t', _id),
+            ('-cycle', '0'),
+            ('-width', '512'),
+            ('-height', '512'),
+            ('-o', 'warmup.jpg'),
+            ('-filename', 'warmup.jpg'),
+    #        ('-idir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\input'),
+    #        ('-odir', 'D:\\Websites\\opensourceais\\backend_public\\_temp\\output'),
+    #        ('-orig', 'http://192.168.1.83:3022/'),
+        ])
+        return sample_args
+    except:
+        print("Could not call warm up!\r\n")
+        return None
 
-    except Exception as err:
-        print("\r\nCRITICAL ERROR!!!")
-        raise err
+## Run Warmup
+def runWarmup(_id, fn_osais_runWarmup): 
+    _args=getWarmupData(_id)
+    fn_osais_runWarmup(fnRun, _args)
 
-    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, args.output))
+## Run AI
+def runAI(request, fn_osais_runAI): 
+    fn_osais_runAI(fnRun, request.query_params._dict)
 
-    lst=[]
-    for arg in sys.argv:
-        lst.append(arg)
-
-    print (' '.join(lst))
-
-    sys.stdout.flush()

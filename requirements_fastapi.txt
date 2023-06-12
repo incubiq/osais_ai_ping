@@ -1,9 +1,0 @@
-
-fastapi==0.74
-uvicorn[standard]==0.17
-requests==2.25.1
-schedule==1.1.0
-watchdog==2.1.9
-Werkzeug==2.2.2
-Jinja2==3.1.2
-osais>=1.0.0 
