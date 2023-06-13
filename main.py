@@ -18,7 +18,8 @@
 ## ------------------------------------------------------------------------
 #       Use BASE AI 
 ## ------------------------------------------------------------------------
-import sys
 
+import sys
 sys.path.insert(0, '../ai_base')
-from main_fastapi import app
+from main_fastapi import initializeApp
+initializeApp()

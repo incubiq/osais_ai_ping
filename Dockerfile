@@ -19,9 +19,6 @@ COPY ./ping.json .
 COPY ./_ping.py .
 
 # overload config with those default settings
-ENV USERNAME=3fbe53cba18a5c73c3b69421e4f44812460c2e55b7634a77006e54e3f5605a3b
-ENV IS_LOCAL=False
-ENV IS_VIRTUALAI=True
 ENV ENGINE=ping
 
 # run as a server

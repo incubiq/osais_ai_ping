@@ -1,14 +1,10 @@
-
+.vscode/
 *__pycache__*
-readme.txt
-
 _input/*
 _output/*
 
-.vscode/
+readme.txt
 
-osais_debug.py
-env_local
-env_docker_prod
+env_vai
+env_docker_vai
 env_docker_local
-env_secret
