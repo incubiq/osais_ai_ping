@@ -14,7 +14,7 @@ RUN mkdir -p ./ai
 RUN chown -R root:root ./ai
 COPY ./ai/runai.py ./ai/runai.py
 
-# copy AI
+# copy OSAIS -> AI
 COPY ./ping.json .
 COPY ./_ping.py .
 
