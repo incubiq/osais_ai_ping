@@ -24,5 +24,5 @@ sys.path.insert(0, '../ai_base')
 from main_fastapi import app
 
 ## For debuging VAI locally ...
-## from main_fastapi import initializeApp
-## initializeApp("env_vai")
+# from main_fastapi import initializeApp
+# initializeApp("env_vai")
