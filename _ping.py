@@ -42,6 +42,6 @@ def runWarmup(_id, fn_osais_runWarmup):
     fn_osais_runWarmup(fnRun, _args)
 
 ## Run AI
-def runAI(request, fn_osais_runAI): 
-    fn_osais_runAI(fnRun, request.query_params._dict)
+def runAI(_args, fn_osais_runAI): 
+    fn_osais_runAI(fnRun, _args)
 

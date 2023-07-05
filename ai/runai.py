@@ -33,4 +33,10 @@ def fnRun(_args):
         raise err
 
     ## we do nothing (just a copy of image)
-    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, args.output))
+    
+    ## include cycle in output name
+    basename = args.output.split(".")
+    fileOut=basename[0]
+    fileExt=basename[1]
+
+    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, fileOut+"_0."+fileExt))

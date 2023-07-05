@@ -20,7 +20,7 @@
 ## ------------------------------------------------------------------------
 
 import sys
-sys.path.insert(0, '../ai_base')
+sys.path.insert(0, '../osais_ai_base')
 from main_fastapi import app
 
 ## For debuging VAI locally ...

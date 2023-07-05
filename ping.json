@@ -4,7 +4,7 @@
     "location": "",
     "ip": "0.0.0.0",
     "port": 5001,
-    "version": "1.2.5",
+    "version": "1.3.1",
     "description": "For Test and Integration purposes",
     "github": "https://github.com/incubiq/osais_ai_ping",
     "requiresGPU": false,
@@ -16,40 +16,11 @@
         "isMandatory": true,
         "type": "string",
         "default": null,
-        "accept": {"$max": 2048},
+        "accept": {"$max": 1024},
         "ui": {
             "title": "Image input",
             "widget": "uiSelectPicture",
             "column": 1
-        }
-    }, {
-        "in": "width",
-        "out": "-width",
-        "isMandatory": true,
-        "type": "int",
-        "default": 512,
-        "accept": {
-            "$in":[320, 384, 448, 512, 576, 640, 704, 768], 
-            "display":["320x320", "384x384", "448x448", "512x512", "576x576", "640x640", "704x704", "768x768"]
-        },
-        "freeAccess": {"$max": 512},
-        "ui": {
-            "title": "Output resolution",
-            "widget": "uiMultiToggle",
-            "unit": "px",            
-            "column": 2,
-            "autofill": [{"in":"height", "out":"-height"}]
-        }
-    }, {
-        "in": "height",
-        "out": "-height",
-        "isMandatory": true,
-        "type": "int",
-        "default": 512,
-        "accept": {"$in":[320, 384, 448, 512, 576, 640, 704, 768]},
-        "freeAccess": {"$max": 512},
-        "ui": {
-            "unit": "px"
         }
     }, {
         "in": "output",

@@ -3,16 +3,15 @@
 ##
 
 # base stuff
-FROM yeepeekoo/public:ai_base
-
-WORKDIR /src/app
+FROM yeepeekoo/public:ai_base_osais
 
 # install requirements
+# none 
 
 # keep ai in its directory
 RUN mkdir -p ./ai
 RUN chown -R root:root ./ai
-COPY ./ai/runai.py ./ai/runai.py
+COPY ./ai ./ai
 
 # copy OSAIS -> AI
 COPY ./ping.json .

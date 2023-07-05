@@ -7,6 +7,7 @@ This AI can run as either of those options:
  - a remote docker (remote ip) connected to OSAIS as a VirtualAI
 
 AI general attributes
+ - Origin: https://github.com/incubiq/osais_ai_ping
  - Runs on port: 5001  (below referenced as <port>)
  - AI internal name: ai_ping  (below referenced as <engine>)
  - Use CPU? : yes
