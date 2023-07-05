@@ -6,6 +6,7 @@
 import os
 import argparse
 import shutil
+from datetime import datetime
 
 default_image_width = 512
 default_image_height = 512
@@ -27,11 +28,12 @@ def fnRun(_args):
     try:
         args = vq_parser.parse_args(_args)
         print(args)
-
+        
     except Exception as err:
         print("\r\nCRITICAL ERROR!!!")
         raise err
 
+    beg_date = datetime.utcnow()
     ## we do nothing (just a copy of image)
     
     ## include cycle in output name
@@ -39,4 +41,13 @@ def fnRun(_args):
     fileOut=basename[0]
     fileExt=basename[1]
 
-    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, fileOut+"_0."+fileExt))
+    _resFile=fileOut+"_0."+fileExt
+    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, _resFile))
+    
+    ## return output
+    end_date = datetime.utcnow()
+    return {
+        "beg_date": beg_date,
+        "end_date": end_date,
+        "aFile": [_resFile]
+    }
