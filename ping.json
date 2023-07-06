@@ -4,7 +4,7 @@
     "location": "",
     "ip": "0.0.0.0",
     "port": 5001,
-    "version": "1.3.1",
+    "version": "1.3.2",
     "description": "For Test and Integration purposes",
     "github": "https://github.com/incubiq/osais_ai_ping",
     "requiresGPU": false,
@@ -16,7 +16,10 @@
         "isMandatory": true,
         "type": "string",
         "default": null,
-        "accept": {"$max": 1024},
+        "accept": {
+            "$max": 1024,
+            "$ext": [".png", ".jpg", ".jpeg"]
+        },
         "ui": {
             "title": "Image input",
             "widget": "uiSelectPicture",
