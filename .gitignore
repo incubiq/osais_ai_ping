@@ -2,6 +2,8 @@
 *__pycache__*
 _input/*
 _output/*
+_temp/*
+_profile/*
 
 readme.txt
 

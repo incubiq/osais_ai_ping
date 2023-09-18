@@ -4,25 +4,30 @@
     "location": "",
     "ip": "0.0.0.0",
     "port": 5001,
-    "version": "1.3.2",
+    "version": "1.3.7",
     "description": "For Test and Integration purposes",
     "github": "https://github.com/incubiq/osais_ai_ping",
     "requiresGPU": false,
     "isFree": true,
-    "default_cost": 1000,
+    "default_cost": 10,
     "params": [{
         "in": "url_upload",
         "out": "-filename",
         "isMandatory": true,
         "type": "string",
-        "default": null,
-        "accept": {
-            "$max": 1024,
-            "$ext": [".png", ".jpg", ".jpeg"]
+        "value": {
+            "default": null
         },
         "ui": {
             "title": "Image input",
             "widget": "uiSelectPicture",
+            "filterExt": [".png", ".jpg", ".jpeg"],
+            "maxWidth": 1024,
+            "maxHeight": 1024,
+            "minWidth": 256,
+            "minHeight": 256,
+            "ratio": -1,
+            "maxKb": 1024,
             "column": 1
         }
     }, {
@@ -30,18 +35,24 @@
         "out": "-o",
         "isMandatory": true,
         "type": "function",
-        "default": "$output_uid.ext"
+        "value": {
+            "default": "$output_uid.ext"
+        }
     }, {
         "in": "idir",
         "out": "-idir",
         "isMandatory": false,
         "type": "string",
-        "default": "./_input/"
+        "value": {
+            "default": "./_input/"
+        }
     }, {
         "in": "odir",
         "out": "-odir",
         "isMandatory": false,
         "type": "string",
-        "default": "./_output/"
+        "value": {
+            "default": "./_output/"
+        }
     }]
 }

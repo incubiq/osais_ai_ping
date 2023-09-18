@@ -16,9 +16,14 @@
 ##
 
 ## ------------------------------------------------------------------------
-#       Use BASE AI 
+#       Debug our app
 ## ------------------------------------------------------------------------
 
 import sys
+import uvicorn
 sys.path.insert(0, '../osais_ai_base')
-from main_fastapi import app
+
+if __name__ == "__main__":
+    from main_fastapi import app, initializeApp
+#    uvicorn.run(main_fastapi.app, host="0.0.0.0", port=5001)
+    initializeApp("env_vai")
