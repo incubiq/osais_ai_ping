@@ -57,6 +57,7 @@ def fnRun(_args):
     vq_parser.add_argument("-width",  "--width", type=int, help="Image width", default=default_image_width, dest='wImage')
     vq_parser.add_argument("-height",  "--height", type=int, help="Image height", default=default_image_height, dest='hImage')
     vq_parser.add_argument("-o",    "--output", type=str, help="Output filename", default="output.png", dest='output')
+    vq_parser.add_argument("-watermark",    "--watermark", type=str, help="watermark filename", default=None, dest='watermark')
 
     try:
         args = vq_parser.parse_args(_args)
@@ -75,7 +76,22 @@ def fnRun(_args):
     fileExt=basename[1]
 
     _resFile=fileOut+"_0."+fileExt
-    shutil.copy2(os.path.join(args.indir, args.init_image), os.path.join(args.outdir, _resFile))
+
+    _fileIn=os.path.join(args.indir, args.init_image)
+    if args.watermark:
+        import urllib.request 
+        from PIL import Image 
+        from osais_utils import AddWatermark
+        
+        _fileWatermark=os.path.join(args.indir,"watermark.png")
+        urllib.request.urlretrieve(args.watermark, _fileWatermark)
+        image2 = Image.open(_fileWatermark)
+        
+        image1 = Image.open(_fileIn)
+        imgRet=AddWatermark(image1, image2)
+        imgRet.save(os.path.join(args.outdir, _resFile),"JPEG")
+    else:
+        shutil.copy2(_fileIn, os.path.join(args.outdir, _resFile))
     
     ## return output
     end_date = datetime.utcnow()

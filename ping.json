@@ -4,7 +4,7 @@
     "location": "",
     "ip": "0.0.0.0",
     "port": 5001,
-    "version": "1.3.7",
+    "version": "1.3.8",
     "description": "For Test and Integration purposes",
     "github": "https://github.com/incubiq/osais_ai_ping",
     "requiresGPU": false,
@@ -37,6 +37,14 @@
         "type": "function",
         "value": {
             "default": "$output_uid.ext"
+        }
+    }, {
+        "in": "watermark",
+        "out": "-watermark",
+        "isMandatory": false,
+        "type": "string",
+        "value": {
+            "default": null
         }
     }, {
         "in": "idir",
