@@ -8,10 +8,10 @@ This AI can run as either of those options:
 
 AI general attributes
  - Origin: https://github.com/incubiq/osais_ai_ping
- - Runs on port: 5001  (below referenced as <port>)
- - AI internal name: ai_ping  (below referenced as <engine>)
- - Use CPU? : yes
- - Use GPU? : no
+ - Runs on port:        5001  (below referenced as <port>)
+ - AI internal name:    ai_ping  (below referenced as <engine>)
+ - Use CPU? :           yes
+ - Use GPU? :           no
  - Access to AI main page: <ip>:<port>  (where <ip> is where the AI is run from)
 
 ## Requirements
@@ -26,7 +26,7 @@ AI general attributes
 ## SERVER IN DOCKER FASTAPI MODE
 Although fastapi runs internally on port 8000, we already redirect it to <port>. Then we want to expose it externally on <port>
 
- - for prod on aws (this will run the AI as a Virtual AI): 
+ - for prod on AWS (this will run the AI as a Virtual AI): 
     docker run -d --name <engine> --env-file env_vai --expose <port> --publish <port>:<port> yeepeekoo/public:<engine>
 
  - for localhost test (this will run tha AI as a slave to the local AI gateway): 

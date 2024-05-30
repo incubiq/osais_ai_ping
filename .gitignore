@@ -4,9 +4,13 @@ _input/*
 _output/*
 _temp/*
 _profile/*
+_templates/*
+_static/*
+_osais/*
 
 readme.txt
 
 env_vai
 env_docker_vai
 env_docker_local
+
