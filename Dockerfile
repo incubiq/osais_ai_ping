@@ -6,7 +6,7 @@
 FROM yeepeekoo/public:ai_base_osais
 
 
-###### update latest OSAIS config (not an absolute requirement) ######
+###### update latest OSAIS config ######
 
 # push again the base files
 COPY ./_static/* ./_static
@@ -17,7 +17,7 @@ COPY ./_osais/* .
 COPY ./_input/warmup.jpg ./_input/warmup.jpg
 
 
-###### specific AI config (must do) ######
+###### specific AI config ######
 
 # keep ai in its directory (this includes config files)
 COPY ./ai ./ai
